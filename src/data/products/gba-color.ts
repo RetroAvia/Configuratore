@@ -74,8 +74,12 @@ export const gbaColor: ProductConfig = {
       ],
     },
     holes: [
-      // Schermo LCD.
-      { type: 'rect', x: 302, y: 216, width: 892, height: 791, radius: 16 },
+      // Pannello anteriore trasparente: schermo LCD + indicatore POWER +
+      // logo "GAME BOY COLOR" stampato — è tutto un unico pezzo fisico
+      // separato dalla scocca, quindi va escluso per intero (non solo il
+      // rettangolo dello schermo), altrimenti l'immagine dell'utente
+      // finirebbe per coprire il logo e la scritta POWER.
+      { type: 'rect', x: 88, y: 96, width: 1315, height: 1102, radius: 80 },
       // Croce direzionale (D-pad).
       {
         type: 'polygon',

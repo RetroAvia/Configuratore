@@ -44,9 +44,21 @@ export interface LoadedFileImage {
  * su canvas o mostrato a schermo.
  */
 export function loadImageFromFile(file: File): Promise<LoadedFileImage> {
-  assertValidImageFile(file)
-
   return new Promise((resolve, reject) => {
+    // La validazione DEVE avvenire dentro l'esecutore della Promise: se
+    // `assertValidImageFile` lanciasse fuori da qui, l'errore uscirebbe come
+    // eccezione sincrona invece che come rifiuto della Promise, e i
+    // `.catch(...)` di chi chiama questa funzione non lo intercetterebbero
+    // mai (un formato non supportato o un file troppo grande farebbe
+    // crashare silenziosamente l'upload invece di mostrare il messaggio
+    // d'errore previsto).
+    try {
+      assertValidImageFile(file)
+    } catch (err) {
+      reject(err)
+      return
+    }
+
     const url = URL.createObjectURL(file)
     const img = new Image()
     img.onload = () => {

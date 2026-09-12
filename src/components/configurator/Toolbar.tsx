@@ -1,21 +1,26 @@
 import type { ButtonHTMLAttributes, MouseEvent } from 'react'
 import { MAX_SCALE, MIN_SCALE } from '../../hooks/useImageTransform'
 import type { ImageTransform } from '../../hooks/useImageTransform'
+import type { ImageLayer } from '../../types/layers'
 import { playClick } from '../../utils/sound'
 
 interface ToolbarProps {
-  hasImage: boolean
-  transform: ImageTransform
-  showGrid: boolean
-  isExporting: boolean
-  onToggleGrid: (value: boolean) => void
+  layers: ImageLayer[]
+  selectedLayerId: string | null
+  /** Trasformazione dello strato selezionato (per popolare gli slider), oppure null se nessuno strato è selezionato. */
+  selectedTransform: ImageTransform | null
+  onSelectLayer: (id: string | null) => void
+  onRemoveLayer: (id: string) => void
   onScaleChange: (scale: number) => void
   onRotationChange: (rotation: number) => void
   onQuickRotate: (deltaDeg: number) => void
   onCenterAndFit: () => void
   onReset: () => void
-  onRequestUpload: () => void
-  onExport: () => void
+  onRequestAddImage: () => void
+  onRequestReplaceSelected: () => void
+  showGrid: boolean
+  onToggleGrid: (value: boolean) => void
+  maxLayers: number
 }
 
 function IconButton({
@@ -40,35 +45,99 @@ function IconButton({
 }
 
 export default function Toolbar({
-  hasImage,
-  transform,
-  showGrid,
-  isExporting,
-  onToggleGrid,
+  layers,
+  selectedLayerId,
+  selectedTransform,
+  onSelectLayer,
+  onRemoveLayer,
   onScaleChange,
   onRotationChange,
   onQuickRotate,
   onCenterAndFit,
   onReset,
-  onRequestUpload,
-  onExport,
+  onRequestAddImage,
+  onRequestReplaceSelected,
+  showGrid,
+  onToggleGrid,
+  maxLayers,
 }: ToolbarProps) {
-  const scalePercent = Math.round(transform.scale * 100)
+  const hasImage = layers.length > 0
+  const scalePercent = selectedTransform ? Math.round(selectedTransform.scale * 100) : 100
 
   return (
     <div className="flex flex-col gap-5 rounded-3xl border border-border bg-surface p-5 shadow-xl sm:p-6">
       <div>
         <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-muted">Immagine</h2>
+
         <div className="mt-3 flex flex-wrap gap-2">
-          <IconButton onClick={onRequestUpload}>
-            <span aria-hidden="true">{hasImage ? '🔁' : '📤'}</span>
-            {hasImage ? 'Cambia immagine' : 'Carica immagine'}
+          <IconButton onClick={onRequestAddImage} disabled={layers.length >= maxLayers}>
+            <span aria-hidden="true">{hasImage ? '➕' : '📤'}</span>
+            {hasImage ? 'Aggiungi immagine' : 'Carica immagine'}
           </IconButton>
+          {hasImage && (
+            <IconButton onClick={onRequestReplaceSelected} disabled={!selectedLayerId}>
+              <span aria-hidden="true">🔁</span>
+              Sostituisci selezionata
+            </IconButton>
+          )}
         </div>
+
+        {hasImage && (
+          <>
+            <p className="mt-3 text-xs leading-relaxed text-ink-muted">
+              {layers.length === 1
+                ? "Aggiungine altre per comporre un collage: ogni immagine si sposta, ridimensiona e ruota in modo indipendente dalle altre."
+                : `${layers.length} immagini nel collage — tocca una miniatura per selezionarla e modificarla.`}
+            </p>
+
+            <ul className="mt-2 flex flex-wrap gap-1.5">
+              {layers.map((layer, index) => (
+                <li
+                  key={layer.id}
+                  className={`flex items-center gap-1 rounded-full border pl-1 pr-0.5 py-0.5 text-xs font-medium transition-colors ${
+                    layer.id === selectedLayerId
+                      ? 'border-primary bg-primary/15 text-ink'
+                      : 'border-border bg-surface-2 text-ink-muted'
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playClick()
+                      onSelectLayer(layer.id)
+                    }}
+                    className="flex items-center gap-1.5 rounded-full px-2 py-1 transition-colors hover:text-ink"
+                  >
+                    <span aria-hidden="true">🖼️</span>
+                    Immagine {index + 1}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playClick()
+                      onRemoveLayer(layer.id)
+                    }}
+                    aria-label={`Rimuovi immagine ${index + 1}`}
+                    className="rounded-full px-1.5 py-1 text-ink-muted transition-colors hover:text-danger"
+                  >
+                    ✕
+                  </button>
+                </li>
+              ))}
+            </ul>
+
+            {layers.length >= maxLayers && (
+              <p className="mt-2 text-[11px] text-ink-muted">Hai raggiunto il massimo di {maxLayers} immagini.</p>
+            )}
+          </>
+        )}
       </div>
 
-      <div className={hasImage ? '' : 'pointer-events-none opacity-40'} aria-disabled={!hasImage}>
+      <div className={selectedTransform ? '' : 'pointer-events-none opacity-40'} aria-disabled={!selectedTransform}>
         <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-muted">Posizionamento</h2>
+        {layers.length > 1 && selectedTransform && (
+          <p className="mt-1 text-[11px] text-ink-muted">Regola l'immagine selezionata (evidenziata nell'anteprima).</p>
+        )}
 
         <div className="mt-3 space-y-4">
           <div>
@@ -82,16 +151,16 @@ export default function Toolbar({
               min={MIN_SCALE}
               max={MAX_SCALE}
               step={0.01}
-              value={transform.scale}
+              value={selectedTransform?.scale ?? 1}
               onChange={(e) => onScaleChange(Number(e.target.value))}
-              disabled={!hasImage}
+              disabled={!selectedTransform}
             />
           </div>
 
           <div>
             <div className="mb-1 flex items-center justify-between text-xs text-ink-muted">
               <label htmlFor="rotation-range">Rotazione</label>
-              <span className="font-mono text-ink">{Math.round(transform.rotation)}°</span>
+              <span className="font-mono text-ink">{Math.round(selectedTransform?.rotation ?? 0)}°</span>
             </div>
             <input
               id="rotation-range"
@@ -99,15 +168,15 @@ export default function Toolbar({
               min={-180}
               max={180}
               step={1}
-              value={transform.rotation}
+              value={selectedTransform?.rotation ?? 0}
               onChange={(e) => onRotationChange(Number(e.target.value))}
-              disabled={!hasImage}
+              disabled={!selectedTransform}
             />
             <div className="mt-2 flex gap-2">
-              <IconButton className="flex-1 py-1.5 text-xs" onClick={() => onQuickRotate(-90)} disabled={!hasImage}>
+              <IconButton className="flex-1 py-1.5 text-xs" onClick={() => onQuickRotate(-90)} disabled={!selectedTransform}>
                 ↺ -90°
               </IconButton>
-              <IconButton className="flex-1 py-1.5 text-xs" onClick={() => onQuickRotate(90)} disabled={!hasImage}>
+              <IconButton className="flex-1 py-1.5 text-xs" onClick={() => onQuickRotate(90)} disabled={!selectedTransform}>
                 ↻ +90°
               </IconButton>
             </div>
@@ -115,11 +184,11 @@ export default function Toolbar({
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          <IconButton onClick={onCenterAndFit} disabled={!hasImage}>
+          <IconButton onClick={onCenterAndFit} disabled={!selectedTransform}>
             <span aria-hidden="true">🎯</span>
             Centra automaticamente
           </IconButton>
-          <IconButton onClick={onReset} disabled={!hasImage}>
+          <IconButton onClick={onReset} disabled={!selectedTransform}>
             <span aria-hidden="true">↺</span>
             Reset
           </IconButton>
@@ -141,32 +210,13 @@ export default function Toolbar({
           />
         </label>
         <p className="mt-2 text-xs leading-relaxed text-ink-muted">
-          Trascina l'immagine per spostarla, usa le maniglie sugli angoli (o il pizzico a due dita su
-          mobile) per ridimensionarla, e la maniglia in alto per ruotarla. Le linee guida azzurre
-          compaiono automaticamente quando l'immagine è centrata. Quando sei soddisfatto, genera il
-          render qui sotto: potrai poi inviarlo a RetroAvia via email o Instagram.
+          Tocca una miniatura qui sopra per scegliere l'immagine da modificare. Trascina l'immagine
+          selezionata per spostarla, usa le maniglie sugli angoli (o il pizzico a due dita su mobile) per
+          ridimensionarla, e la maniglia in alto per ruotarla. Le linee guida azzurre compaiono
+          automaticamente quando è centrata. Quando sei soddisfatto, genera e invia il render dal
+          pannello qui sotto.
         </p>
       </div>
-
-      <button
-        type="button"
-        onClick={() => {
-          playClick()
-          onExport()
-        }}
-        disabled={!hasImage || isExporting}
-        className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:brightness-110 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40"
-        style={{ backgroundImage: 'linear-gradient(90deg, #c1272d, #e8b04b)' }}
-      >
-        {isExporting ? (
-          'Sto preparando il render…'
-        ) : (
-          <>
-            <span aria-hidden="true">📨</span>
-            Genera immagine da inviare
-          </>
-        )}
-      </button>
     </div>
   )
 }

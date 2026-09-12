@@ -53,8 +53,11 @@ export const gbaAdvance: ProductConfig = {
       ],
     },
     holes: [
-      // Schermo LCD (bordo incluso).
-      { type: 'rect', x: 684, y: 262, width: 1110, height: 775, radius: 24 },
+      // Pannello anteriore: schermo LCD + logo "GAME BOY ADVANCE" stampato
+      // sotto — è un unico pannello incassato nella scocca, quindi va
+      // escluso per intero (non solo il rettangolo dello schermo),
+      // altrimenti l'immagine dell'utente finirebbe per coprire il logo.
+      { type: 'rect', x: 618, y: 178, width: 1212, height: 1117, radius: 190 },
       // Croce direzionale (D-pad).
       {
         type: 'polygon',

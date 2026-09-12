@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
 import type { ClipShape } from '../types/product'
 import { getClipAreaBounds, getClipAreaCenter } from '../utils/clipShapes'
 
-/** Stato di posizionamento dell'immagine caricata dall'utente, in pixel/gradi del canvas nativo. */
+/** Stato di posizionamento di uno strato immagine nel configuratore, in pixel/gradi del canvas nativo. */
 export interface ImageTransform {
   /** Coordinata X del centro dell'immagine. */
   x: number
@@ -33,6 +32,10 @@ export function normalizeRotation(rotation: number): number {
  * Calcola la trasformazione che copre interamente la clip area ("cover
  * fit"): l'immagine viene centrata e scalata al minimo necessario per
  * riempirla senza lasciare spazi vuoti, mantenendo le proporzioni originali.
+ *
+ * Usata per il PRIMO strato caricato per un prodotto (comportamento più
+ * naturale quando c'è una sola immagine: nessuno spazio vuoto attorno) e
+ * per "Centra automaticamente"/"Reset" su uno strato già esistente.
  */
 export function computeCoverTransform(
   clip: ClipShape,
@@ -46,78 +49,37 @@ export function computeCoverTransform(
   return { x: center.x, y: center.y, scale, rotation }
 }
 
-interface LoadedImageInfo {
-  /** Identificativo univoco dell'immagine corrente (es. l'object URL): cambia solo quando viene caricata una nuova immagine. */
-  key: string
-  width: number
-  height: number
-}
-
 /**
- * Gestisce lo stato di trasformazione (posizione, scala, rotazione)
- * dell'immagine caricata dall'utente all'interno del configuratore.
- *
- * La trasformazione viene ricalcolata automaticamente in "cover fit" ogni
- * volta che viene caricata una nuova immagine (cambio di `image.key`) o
- * quando cambia la clip area del prodotto (es. navigando tra due modelli).
+ * Calcola una trasformazione di partenza ragionevole per uno strato
+ * AGGIUNTIVO (il secondo, il terzo, ...) quando si sta componendo un
+ * collage: a differenza di `computeCoverTransform`, non riempie tutta
+ * l'area (altrimenti nasconderebbe subito gli strati sottostanti), ma parte
+ * più piccola e sfalsata attorno al centro — così ogni nuova immagine è
+ * subito visibile e libera di essere trascinata dove serve.
  */
-export function useImageTransform(clip: ClipShape, image: LoadedImageInfo | null) {
-  const [transform, setTransform] = useState<ImageTransform>(() =>
-    image ? computeCoverTransform(clip, image.width, image.height) : { x: 0, y: 0, scale: 1, rotation: 0 },
-  )
+export function computeAdditionalLayerTransform(
+  clip: ClipShape,
+  naturalWidth: number,
+  naturalHeight: number,
+  layerIndex: number,
+): ImageTransform {
+  const center = getClipAreaCenter(clip)
+  const bounds = getClipAreaBounds(clip)
+  const targetSize = Math.min(bounds.width, bounds.height) * 0.5
+  const scale = clampScale(targetSize / Math.max(naturalWidth, naturalHeight))
 
-  useEffect(() => {
-    if (image) {
-      setTransform(computeCoverTransform(clip, image.width, image.height))
-    }
-    // Il ricalcolo deve avvenire SOLO quando cambia l'immagine caricata o il
-    // prodotto attivo, non ad ogni render (altrimenti si perderebbero le
-    // modifiche manuali dell'utente).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [image?.key, clip])
-
-  /** Ripristina la trasformazione iniziale ("cover fit"), azzerando anche la rotazione. */
-  const reset = useCallback(() => {
-    if (!image) return
-    setTransform(computeCoverTransform(clip, image.width, image.height, 0))
-  }, [clip, image])
-
-  /** Ricentra e riadatta l'immagine all'area disponibile, mantenendo la rotazione corrente. */
-  const centerAndFit = useCallback(() => {
-    if (!image) return
-    setTransform((current) => computeCoverTransform(clip, image.width, image.height, current.rotation))
-  }, [clip, image])
-
-  const setPosition = useCallback((x: number, y: number) => {
-    setTransform((current) => ({ ...current, x, y }))
-  }, [])
-
-  const translate = useCallback((dx: number, dy: number) => {
-    setTransform((current) => ({ ...current, x: current.x + dx, y: current.y + dy }))
-  }, [])
-
-  const setScale = useCallback((updater: number | ((scale: number) => number)) => {
-    setTransform((current) => {
-      const next = typeof updater === 'function' ? updater(current.scale) : updater
-      return { ...current, scale: clampScale(next) }
-    })
-  }, [])
-
-  const setRotation = useCallback((updater: number | ((rotation: number) => number)) => {
-    setTransform((current) => {
-      const next = typeof updater === 'function' ? updater(current.rotation) : updater
-      return { ...current, rotation: normalizeRotation(next) }
-    })
-  }, [])
+  // Sfalsamento "a cascata" attorno al centro, diverso per ogni strato
+  // successivo, così due immagini aggiunte una dopo l'altra non finiscono
+  // esattamente sovrapposte (il che le farebbe sembrare sparite l'una
+  // dentro l'altra).
+  const angleStep = (Math.PI * 2) / 5
+  const angle = (layerIndex - 1) * angleStep
+  const radius = Math.min(bounds.width, bounds.height) * 0.16
 
   return {
-    transform,
-    setTransform,
-    setPosition,
-    translate,
-    setScale,
-    setRotation,
-    reset,
-    centerAndFit,
+    x: center.x + Math.cos(angle) * radius,
+    y: center.y + Math.sin(angle) * radius,
+    scale,
+    rotation: 0,
   }
 }
