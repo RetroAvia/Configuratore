@@ -20,7 +20,7 @@ import tailwindcss from '@tailwindcss/vite'
 //
 // In alternativa puoi impostare la variabile d'ambiente VITE_BASE_PATH in
 // fase di build (vedi .github/workflows/deploy.yml) senza toccare questo file.
-const BASE_PATH = process.env.VITE_BASE_PATH || '/casio-f91w-configurator/'
+const BASE_PATH = '/'
 
 export default defineConfig({
   base: BASE_PATH,

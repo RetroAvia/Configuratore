@@ -1,0 +1,62 @@
+name: Deploy su GitHub Pages
+
+# Ricostruisce e pubblica automaticamente il sito su GitHub Pages ad ogni
+# push sul branch principale. Per abilitarlo la prima volta:
+#   Impostazioni del repository → Pages → "Source" → "GitHub Actions".
+on:
+  push:
+    branches: [main]
+  # Permette anche di lanciare il deploy manualmente dalla tab "Actions" di GitHub.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Scarica il codice
+        uses: actions/checkout@v4
+
+      - name: Imposta Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Installa le dipendenze
+        run: npm ci
+
+      - name: Build del sito
+        run: npm run build
+        env:
+          # Nome del repository: determina il percorso base del sito su
+          # GitHub Pages (https://<utente>.github.io/<nome-repo>/).
+          # Se in vite.config.ts hai già impostato manualmente il valore
+          # corretto, questa variabile d'ambiente lo sovrascrive comunque
+          # con quello reale del repository corrente — utile se in futuro
+          # rinomini il repository o lo fai fork.
+          VITE_BASE_PATH: /${{ github.event.repository.name }}/
+
+      - name: Carica il risultato della build
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Pubblica su GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

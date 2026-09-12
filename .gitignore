@@ -1,0 +1,33 @@
+# Dipendenze
+node_modules
+
+# Build
+dist
+dist-ssr
+
+# Log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Variabili d'ambiente locali
+.env
+.env.local
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Variabili d'ambiente aggiuntive
+.env.*.local
