@@ -2,7 +2,7 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import type { DragEvent, PointerEvent as ReactPointerEvent, ReactElement, WheelEvent } from 'react'
 import type { ProductConfig } from '../../types/product'
 import type { ImageTransform } from '../../hooks/useImageTransform'
-import { clipAreaToCssClipPath, clipAreaToSvgPath, getClipAreaCenter } from '../../utils/clipShapes'
+import { buildCompoundPathD, clipAreaToCssClipPath, clipAreaToSvgPath, getClipAreaCenter } from '../../utils/clipShapes'
 import UploadPrompt from './UploadPrompt'
 
 export interface LoadedUserImage {
@@ -94,7 +94,22 @@ export default function ConfiguratorCanvas({
     [nativeW],
   )
 
-  const clipPathCss = useMemo(() => clipAreaToCssClipPath(product.clipArea, product.canvas), [product])
+  // Le clip area "compound" (contorno + fori, es. scocca di una console che
+  // deve escludere schermo e pulsanti) non si esprimono con una singola
+  // funzione CSS `clip-path`: servono un `<clipPath>` SVG con
+  // `clip-rule="evenodd"` disegnato nel DOM e un riferimento `url(#id)`.
+  // Un id per-prodotto evita collisioni se in futuro più configuratori
+  // condividessero la stessa pagina.
+  const svgClipDefId = `clip-${product.slug}`
+  const isCompoundClip = product.clipArea.type === 'compound'
+  const compoundPathD = useMemo(
+    () => (product.clipArea.type === 'compound' ? buildCompoundPathD(product.clipArea, product.canvas) : null),
+    [product],
+  )
+  const clipPathCss = useMemo(
+    () => clipAreaToCssClipPath(product.clipArea, product.canvas, svgClipDefId),
+    [product, svgClipDefId],
+  )
   const clipOutlineD = useMemo(() => clipAreaToSvgPath(product.clipArea), [product])
   const clipCenter = useMemo(() => getClipAreaCenter(product.clipArea), [product])
 
@@ -370,6 +385,14 @@ export default function ConfiguratorCanvas({
           viewBox={`0 0 ${nativeW} ${nativeH}`}
           style={{ pointerEvents: 'none' }}
         >
+          {isCompoundClip && compoundPathD && (
+            <defs>
+              <clipPath id={svgClipDefId} clipPathUnits="objectBoundingBox">
+                <path d={compoundPathD} clipRule="evenodd" />
+              </clipPath>
+            </defs>
+          )}
+
           {userImage && (
             <rect
               x={0}

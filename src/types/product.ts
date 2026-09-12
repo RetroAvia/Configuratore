@@ -8,15 +8,14 @@
  */
 
 /**
- * Forma dell'area di ritaglio ("clip area") in cui viene inserita l'immagine
- * caricata dall'utente — ad es. lo schermo LCD di un orologio.
+ * Forma "semplice" dell'area di ritaglio — un singolo contorno, senza fori.
  *
  * Le coordinate sono sempre espresse in pixel nello stesso sistema di
  * riferimento dell'immagine di base del prodotto (vedi `ProductConfig.canvas`),
  * NON normalizzate (0..1): questo rende semplice ricavarle direttamente da un
  * editor grafico, leggendo le coordinate in pixel sull'immagine di base.
  */
-export type ClipShape =
+export type SimpleClipShape =
   | {
       type: 'rect'
       x: number
@@ -41,6 +40,27 @@ export type ClipShape =
       points: [number, number][]
     }
 
+/**
+ * Forma "composta" dell'area di ritaglio: un contorno esterno con uno o più
+ * fori (aree escluse) al suo interno.
+ *
+ * Serve per i prodotti in cui l'immagine dell'utente deve coprire l'intera
+ * scocca MA senza mai sovrapporsi a elementi funzionali come lo schermo o i
+ * pulsanti (es. Game Boy Color / Game Boy Advance, dove il grafico
+ * personalizzato va solo sulla scocca, lasciando schermo e tasti invariati).
+ *
+ * Ogni foro è a sua volta una `SimpleClipShape`: niente fori dentro ai fori.
+ */
+export interface CompoundClipShape {
+  type: 'compound'
+  /** Contorno esterno complessivo (es. la sagoma dell'intera scocca). */
+  outer: SimpleClipShape
+  /** Aree escluse dal ritaglio (es. schermo, D-pad, pulsanti). */
+  holes: SimpleClipShape[]
+}
+
+export type ClipShape = SimpleClipShape | CompoundClipShape
+
 export interface ProductConfig {
   /** Identificativo univoco del prodotto, usato come slug nell'URL. */
   slug: string
@@ -64,8 +84,9 @@ export interface ProductConfig {
   baseImage: string
   /**
    * Percorso opzionale di un'immagine (con trasparenza) da disegnare SOPRA
-   * l'immagine caricata dall'utente — ad es. il vetro/riflesso dello schermo.
-   * Se omesso, non viene disegnato nulla sopra.
+   * l'immagine caricata dall'utente — ad es. le cifre/icone del display LCD,
+   * che devono restare leggibili sopra alla foto dell'utente. Se omesso, non
+   * viene disegnato nulla sopra.
    */
   overlayImage?: string
   /**

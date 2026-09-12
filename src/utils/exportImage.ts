@@ -40,7 +40,11 @@ export async function renderProductComposite({
   // 2. Immagine dell'utente, ritagliata rigorosamente nell'area del quadrante/schermo.
   ctx.save()
   buildClipPath2D(ctx, product.clipArea)
-  ctx.clip()
+  // 'evenodd' fa sì che i fori (per le clip area composte, es. schermo e
+  // pulsanti di una console) escludano correttamente l'area sottostante;
+  // per le forme semplici (un solo sotto-percorso) si comporta in modo
+  // identico a 'nonzero', quindi è sicuro usarlo sempre.
+  ctx.clip('evenodd')
   ctx.translate(transform.x, transform.y)
   ctx.rotate((transform.rotation * Math.PI) / 180)
   ctx.scale(transform.scale, transform.scale)

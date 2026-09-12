@@ -1,17 +1,20 @@
 # Configuratore — personalizza i tuoi prodotti
 
-Web app 100% client-side per personalizzare graficamente dei prodotti (si parte dal
-**Casio F-91W**) caricando una propria immagine, che viene ritagliata nella forma
-esatta del quadrante/schermo e resa modificabile (posizione, scala, rotazione)
-direttamente nel browser. Nessun server, nessun database: tutto il lavoro avviene
-sul dispositivo dell'utente, ed è pubblicabile gratuitamente su **GitHub Pages**.
+Web app 100% client-side per personalizzare graficamente dei prodotti — orologi
+digitali (**Casio F-91W**, **Casio A158W**) e console portatili Nintendo
+(**Game Boy Advance SP**, **Game Boy Color**, **Game Boy Advance**) — caricando
+una propria immagine, che viene ritagliata esattamente nell'area corretta
+(lo schermo per gli orologi, l'intera scocca per le console) e resa
+modificabile (posizione, scala, rotazione) direttamente nel browser. Nessun
+server, nessun database: tutto il lavoro avviene sul dispositivo dell'utente,
+ed è pubblicabile gratuitamente su **GitHub Pages**.
 
 ## Indice
 
 - [Avvio in locale](#avvio-in-locale)
 - [Come funziona (architettura)](#come-funziona-architettura)
 - [Aggiungere un nuovo prodotto](#aggiungere-un-nuovo-prodotto)
-- [Sostituire l'immagine segnaposto del Casio F-91W](#sostituire-limmagine-segnaposto-del-casio-f-91w)
+- [Tipi di area di ritaglio (ClipShape)](#tipi-di-area-di-ritaglio-clipshape)
 - [Pubblicare su GitHub Pages](#pubblicare-su-github-pages)
 - [Stack tecnico](#stack-tecnico)
 
@@ -59,7 +62,11 @@ src/
 ├── data/
 │   ├── categories.ts          → Elenco delle categorie disponibili
 │   └── products/
-│       ├── casio-f91w.ts      → Configurazione del Casio F-91W
+│       ├── casio-f91w.ts      → Configurazione del Casio F-91W (clip area = schermo)
+│       ├── casio-a158w.ts     → Configurazione del Casio A158W (clip area = schermo)
+│       ├── gba-sp.ts          → Configurazione del Game Boy Advance SP (clip area = intera scocca)
+│       ├── gba-color.ts       → Configurazione del Game Boy Color (clip area = scocca, con fori)
+│       ├── gba-advance.ts     → Configurazione del Game Boy Advance (clip area = scocca, con fori)
 │       └── index.ts           → Aggregatore + funzioni di ricerca prodotti
 ├── hooks/
 │   ├── useImageTransform.ts   → Stato di posizione/scala/rotazione dell'immagine utente
@@ -116,26 +123,41 @@ puntatore sul canvas vedrai in tempo reale le coordinate, in pixel nativi, utili
 per individuare con precisione gli angoli dello schermo/quadrante nella tua
 immagine e scrivere i valori corretti in `clipArea`.
 
-## Sostituire l'immagine segnaposto del Casio F-91W
+## Tipi di area di ritaglio (`ClipShape`)
 
-Il modello Casio F-91W incluso in questo repository usa **un'illustrazione
-segnaposto originale** (`public/products/casio-f91w/base.svg`), non una vera
-fotografia, in attesa di una foto/render reale del prodotto. Per sostituirla:
+`src/types/product.ts` definisce due famiglie di aree di ritaglio, usate da
+`clipArea` in ogni `ProductConfig`:
 
-1. Procurati una foto o un render frontale del Casio F-91W, ad alta
-   risoluzione, ben centrato e senza prospettiva (vista dritta, non in
-   diagonale).
-2. Salvala in `public/products/casio-f91w/` (es. `base.png`).
-3. In `src/data/products/casio-f91w.ts`, aggiorna `baseImage` (e `thumbnail`,
-   se vuoi una miniatura dedicata) con il nuovo percorso.
-4. Aggiorna `canvas.width` e `canvas.height` con le dimensioni **esatte**, in
-   pixel, della nuova immagine.
-5. Ricalcola le coordinate di `clipArea` in modo che corrispondano esattamente
-   al riquadro dello schermo LCD nella nuova immagine, usando la modalità di
-   debug descritta sopra.
+- **Forma semplice** (`rect` / `ellipse` / `polygon`) — un singolo contorno,
+  senza fori. È il caso degli orologi: l'immagine dell'utente viene ritagliata
+  esattamente nel rettangolo dello schermo LCD (`casio-f91w.ts`,
+  `casio-a158w.ts`) oppure, per il Game Boy Advance SP, in un poligono che
+  segue l'intero profilo della scocca frontale (`gba-sp.ts`).
 
-Il resto del configuratore (interazioni, esportazione, responsive) funziona
-automaticamente con qualunque immagine e qualunque area di ritaglio.
+- **Forma composta** (`compound`) — un contorno esterno (`outer`) più una
+  lista di fori (`holes`), ciascuno a sua volta una forma semplice. Serve
+  quando l'immagine dell'utente deve coprire un'intera area MA senza mai
+  sovrapporsi a elementi funzionali che devono restare quelli originali —
+  ad es. il Game Boy Color e il Game Boy Advance (`gba-color.ts`,
+  `gba-advance.ts`): l'immagine copre tutta la scocca, ma schermo, D-pad,
+  tasti A/B e Start/Select restano sempre quelli della foto reale grazie ai
+  fori. Il motore di rendering (`src/utils/clipShapes.ts`) traduce
+  automaticamente contorno + fori in un `clip-path` CSS (via un `<clipPath>`
+  SVG con `clip-rule="evenodd"`, per restare responsive con puro CSS come le
+  forme semplici) e nel corrispondente ritaglio Canvas 2D usato in fase di
+  esportazione — non serve altro codice per aggiungere un prodotto con fori.
+
+### Per gli orologi (schermo): l'overlay delle cifre
+
+Per i modelli con display LCD (F-91W, A158W) l'immagine dell'utente finisce
+SOTTO un secondo livello, `overlayImage`: un ritaglio con trasparenza delle
+sole cifre/icone del display, estratto dalla foto reale del prodotto. In
+questo modo l'ora "88:88" e le icone restano sempre leggibili sopra alla
+foto personalizzata, invece di sparire dietro di essa.
+
+> Per trovare le coordinate pixel esatte da usare in `clipArea` (contorni,
+> fori, centri) su una nuova immagine, usa la modalità di debug descritta
+> sopra in ["Trovare le coordinate dell'area di ritaglio"](#trovare-le-coordinate-dellarea-di-ritaglio).
 
 ## Pubblicare su GitHub Pages
 

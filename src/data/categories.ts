@@ -6,15 +6,6 @@ import type { CategoryConfig } from '../types/product'
  * Per aggiungere una nuova categoria in futuro, aggiungi semplicemente un
  * nuovo oggetto a questo array: la home page e la navigazione si
  * aggiornano automaticamente, senza altre modifiche al codice.
- *
- * Esempio (quando sarà pronto un modello nella categoria "Console"):
- *
- * {
- *   slug: 'console',
- *   name: 'Console',
- *   description: 'Dai un nuovo stile alle tue console portatili preferite.',
- *   icon: '🎮',
- * }
  */
 export const categories: CategoryConfig[] = [
   {
@@ -22,6 +13,12 @@ export const categories: CategoryConfig[] = [
     name: 'Orologi',
     description: 'Personalizza il quadrante dei tuoi orologi digitali preferiti.',
     icon: '⌚',
+  },
+  {
+    slug: 'console',
+    name: 'Console',
+    description: 'Dai un nuovo stile alle tue console portatili preferite.',
+    icon: '🎮',
   },
 ]
 
