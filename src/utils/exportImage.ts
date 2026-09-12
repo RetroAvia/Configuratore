@@ -1,6 +1,6 @@
 import type { ProductConfig } from '../types/product'
 import type { ImageTransform } from '../hooks/useImageTransform'
-import { buildClipPath2D } from './clipShapes'
+import { clipSimpleShape2D } from './clipShapes'
 
 interface RenderCompositeParams {
   product: ProductConfig
@@ -16,6 +16,14 @@ interface RenderCompositeParams {
  * eventuale livello sopra (es. vetro/riflesso). Tutto avviene su un canvas
  * offscreen, alla risoluzione nativa del prodotto — mai a quella (più bassa)
  * usata per l'anteprima a schermo.
+ *
+ * Per i prodotti con clip area "compound" (contorno esterno + fori, es. la
+ * scocca di una console che deve escludere schermo e pulsanti), l'immagine
+ * dell'utente viene ritagliata sul solo CONTORNO ESTERNO, poi per ogni foro
+ * si ridisegna sopra un ritaglio della foto originale del prodotto — la
+ * stessa identica tecnica usata nell'anteprima dal vivo in
+ * `ConfiguratorCanvas`, cosa che garantisce che l'esportazione corrisponda
+ * sempre esattamente a quello che si vede nell'editor.
  */
 export async function renderProductComposite({
   product,
@@ -37,21 +45,28 @@ export async function renderProductComposite({
   // 1. Immagine di base del prodotto.
   ctx.drawImage(baseImageEl, 0, 0, width, height)
 
-  // 2. Immagine dell'utente, ritagliata rigorosamente nell'area del quadrante/schermo.
+  // 2. Immagine dell'utente, ritagliata sul contorno esterno del quadrante/scocca.
+  const outerShape = product.clipArea.type === 'compound' ? product.clipArea.outer : product.clipArea
   ctx.save()
-  buildClipPath2D(ctx, product.clipArea)
-  // 'evenodd' fa sì che i fori (per le clip area composte, es. schermo e
-  // pulsanti di una console) escludano correttamente l'area sottostante;
-  // per le forme semplici (un solo sotto-percorso) si comporta in modo
-  // identico a 'nonzero', quindi è sicuro usarlo sempre.
-  ctx.clip('evenodd')
+  clipSimpleShape2D(ctx, outerShape)
   ctx.translate(transform.x, transform.y)
   ctx.rotate((transform.rotation * Math.PI) / 180)
   ctx.scale(transform.scale, transform.scale)
   ctx.drawImage(userImageEl, -userImageEl.naturalWidth / 2, -userImageEl.naturalHeight / 2)
   ctx.restore()
 
-  // 3. Eventuale livello sopra (es. vetro/riflesso dello schermo), se configurato per il prodotto.
+  // 3. Fori (schermo, D-pad, pulsanti...): ridisegnano sopra un ritaglio della
+  // foto originale, così l'immagine dell'utente non compare mai lì.
+  if (product.clipArea.type === 'compound') {
+    for (const hole of product.clipArea.holes) {
+      ctx.save()
+      clipSimpleShape2D(ctx, hole)
+      ctx.drawImage(baseImageEl, 0, 0, width, height)
+      ctx.restore()
+    }
+  }
+
+  // 4. Eventuale livello sopra (es. vetro/riflesso dello schermo), se configurato per il prodotto.
   if (overlayImageEl) {
     ctx.drawImage(overlayImageEl, 0, 0, width, height)
   }

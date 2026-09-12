@@ -48,36 +48,25 @@ export function getClipAreaBounds(clip: ClipShape): { width: number; height: num
 }
 
 /**
- * Traduce una clip area nel valore CSS `clip-path` corrispondente, espresso
- * in PERCENTUALI rispetto alle dimensioni native del canvas del prodotto
- * (`ProductConfig.canvas`). Usare percentuali (anziché pixel assoluti) è
- * ciò che permette all'intero stage del configuratore di essere
- * perfettamente responsive con puro CSS, senza dover ricalcolare via
- * JavaScript un fattore di scala ad ogni resize: l'elemento a cui viene
- * applicato questo `clip-path` deve semplicemente mantenere le stesse
- * proporzioni (aspect-ratio) del canvas nativo, qualunque sia la sua
- * dimensione reale a schermo.
+ * Traduce UNA forma semplice (mai composta) nel valore CSS `clip-path`
+ * corrispondente, espresso in PERCENTUALI rispetto alle dimensioni native
+ * del canvas del prodotto (`ProductConfig.canvas`). Usare percentuali
+ * (anziché pixel assoluti) è ciò che permette all'intero stage del
+ * configuratore di essere perfettamente responsive con puro CSS, senza
+ * dover ricalcolare via JavaScript un fattore di scala ad ogni resize.
  *
- * Per le forme composte (con fori) il CSS `clip-path` a funzione non basta
- * (non esiste un modo standard di sottrarre più forme in una sola funzione):
- * in quel caso questa funzione restituisce un riferimento `url(#svgDefId)` a
- * un `<clipPath>` SVG con `clip-rule="evenodd"`, che il componente che lo usa
- * deve aver disegnato nel DOM con lo stesso id (vedi `buildCompoundPathD`).
+ * Deliberatamente NON gestisce le clip area "compound" (contorno + fori):
+ * per quelle, invece di un'unica funzione `clip-path` con regola evenodd
+ * (poco affidabile in pratica per forme con molti punti, come le sagome
+ * fotografiche estratte pixel per pixel), il rendering usa questa stessa
+ * funzione due volte — una per il contorno esterno, e una per OGNI foro —
+ * componendo il risultato con layer separati. Vedi `ConfiguratorCanvas` e
+ * `exportImage.ts`.
  */
-export function clipAreaToCssClipPath(
-  clip: ClipShape,
+export function simpleClipAreaToCssClipPath(
+  clip: SimpleClipShape,
   canvasSize: { width: number; height: number },
-  svgDefId?: string,
 ): string {
-  if (clip.type === 'compound') {
-    if (!svgDefId) {
-      throw new Error(
-        'clipAreaToCssClipPath: una clip area "compound" richiede un svgDefId (il riferimento a un <clipPath> disegnato nel DOM).',
-      )
-    }
-    return `url(#${svgDefId})`
-  }
-
   const pctX = (v: number) => `${(v / canvasSize.width) * 100}%`
   const pctY = (v: number) => `${(v / canvasSize.height) * 100}%`
 
@@ -99,6 +88,21 @@ export function clipAreaToCssClipPath(
     case 'polygon':
       return `polygon(${clip.points.map(([x, y]) => `${pctX(x)} ${pctY(y)}`).join(', ')})`
   }
+}
+
+/**
+ * Traduce una clip area (semplice o composta) nel valore CSS `clip-path` da
+ * applicare al layer dell'immagine dell'utente. Per le forme composte
+ * restituisce il clip-path del solo CONTORNO ESTERNO: i fori (schermo,
+ * pulsanti, ecc.) non si sottraggono qui — vengono invece "richiusi"
+ * disegnando sopra, per ciascun foro, un ritaglio della foto originale del
+ * prodotto (vedi `ConfiguratorCanvas`). Questo evita di dover esprimere
+ * "contorno meno fori" in un'unica regola CSS/SVG con evenodd, che si è
+ * rivelata inaffidabile per sagome fotografiche complesse (centinaia di
+ * punti) combinate con più fori.
+ */
+export function clipAreaToCssClipPath(clip: ClipShape, canvasSize: { width: number; height: number }): string {
+  return simpleClipAreaToCssClipPath(clip.type === 'compound' ? clip.outer : clip, canvasSize)
 }
 
 /** Disegna (senza chiamare `beginPath`) il sotto-percorso Canvas2D di UNA forma semplice. */
@@ -131,20 +135,21 @@ function addSimpleShapeToPath2D(ctx: CanvasRenderingContext2D, clip: SimpleClipS
 }
 
 /**
- * Costruisce il path (Canvas 2D) corrispondente a una clip area, per il
- * rendering di export. Per le forme composte, il contorno esterno e tutti i
- * fori vengono aggiunti come sotto-percorsi dello STESSO path: chi chiama
- * questa funzione deve poi ritagliare con `ctx.clip('evenodd')` (funziona
- * correttamente anche per le forme semplici, quindi è sicuro usarlo sempre).
+ * Ritaglia il contesto Canvas2D su UNA forma semplice (mai composta). Chi
+ * chiama questa funzione deve prima aver salvato lo stato (`ctx.save()`) e
+ * deve poi ripristinarlo (`ctx.restore()`) una volta finito di disegnare.
+ *
+ * Per le clip area "compound" si chiama questa funzione due volte: una per
+ * il contorno esterno (prima di disegnare l'immagine dell'utente) e una per
+ * OGNI foro (prima di ridisegnare sopra il ritaglio della foto originale) —
+ * vedi `exportImage.ts`. Usare un ritaglio semplice per volta, invece di un
+ * unico path con più sotto-percorsi e regola evenodd, evita completamente i
+ * problemi di affidabilità di quella tecnica con sagome complesse.
  */
-export function buildClipPath2D(ctx: CanvasRenderingContext2D, clip: ClipShape) {
+export function clipSimpleShape2D(ctx: CanvasRenderingContext2D, clip: SimpleClipShape) {
   ctx.beginPath()
-  if (clip.type === 'compound') {
-    addSimpleShapeToPath2D(ctx, clip.outer)
-    clip.holes.forEach((hole) => addSimpleShapeToPath2D(ctx, hole))
-  } else {
-    addSimpleShapeToPath2D(ctx, clip)
-  }
+  addSimpleShapeToPath2D(ctx, clip)
+  ctx.clip()
 }
 
 /** Costruisce l'attributo `d` SVG (path) corrispondente a UNA forma semplice, in coordinate native del canvas. */
@@ -182,72 +187,12 @@ function simpleClipShapeToSvgPath(clip: SimpleClipShape): string {
  * NATIVE del canvas — l'SVG che lo ospita usa `viewBox="0 0 W H"`). Per le
  * forme composte concatena contorno esterno e fori: dato che il contorno
  * viene disegnato senza riempimento (solo `stroke`), non serve alcuna
- * `fill-rule` speciale per vederli correttamente entrambi.
+ * `fill-rule` speciale per vederli correttamente entrambi — è puramente
+ * decorativo, non c'entra con il ritaglio vero e proprio dell'immagine.
  */
 export function clipAreaToSvgPath(clip: ClipShape): string {
   if (clip.type === 'compound') {
     return [simpleClipShapeToSvgPath(clip.outer), ...clip.holes.map(simpleClipShapeToSvgPath)].join(' ')
   }
   return simpleClipShapeToSvgPath(clip)
-}
-
-/** Costruisce l'attributo `d` SVG per UNA forma semplice in coordinate FRAZIONARIE (0..1 rispetto al canvas). */
-function simpleClipShapeToFractionalPath(
-  clip: SimpleClipShape,
-  canvasSize: { width: number; height: number },
-): string {
-  const fx = (v: number) => v / canvasSize.width
-  const fy = (v: number) => v / canvasSize.height
-  switch (clip.type) {
-    case 'rect': {
-      const x = fx(clip.x)
-      const y = fy(clip.y)
-      const width = fx(clip.width)
-      const height = fy(clip.height)
-      const rx = fx(clip.radius ?? 0)
-      const ry = fy(clip.radius ?? 0)
-      if (!clip.radius) {
-        return `M ${x} ${y} H ${x + width} V ${y + height} H ${x} Z`
-      }
-      return [
-        `M ${x + rx} ${y}`,
-        `H ${x + width - rx}`,
-        `A ${rx} ${ry} 0 0 1 ${x + width} ${y + ry}`,
-        `V ${y + height - ry}`,
-        `A ${rx} ${ry} 0 0 1 ${x + width - rx} ${y + height}`,
-        `H ${x + rx}`,
-        `A ${rx} ${ry} 0 0 1 ${x} ${y + height - ry}`,
-        `V ${y + ry}`,
-        `A ${rx} ${ry} 0 0 1 ${x + rx} ${y}`,
-        'Z',
-      ].join(' ')
-    }
-    case 'ellipse': {
-      const cx = fx(clip.cx)
-      const cy = fy(clip.cy)
-      const rx = fx(clip.rx)
-      const ry = fy(clip.ry)
-      return `M ${cx - rx} ${cy} A ${rx} ${ry} 0 1 0 ${cx + rx} ${cy} A ${rx} ${ry} 0 1 0 ${cx - rx} ${cy} Z`
-    }
-    case 'polygon':
-      return `M ${clip.points.map(([x, y]) => `${fx(x)} ${fy(y)}`).join(' L ')} Z`
-  }
-}
-
-/**
- * Costruisce l'attributo `d` di un unico path SVG (coordinate frazionarie
- * 0..1, adatte a un `<clipPath clipPathUnits="objectBoundingBox">") che
- * rappresenta una clip area COMPOSTA: contorno esterno + fori, da applicare
- * con `clip-rule="evenodd"` sul `<path>` che lo usa. Usare
- * `objectBoundingBox` è ciò che rende il ritaglio responsive con puro CSS,
- * esattamente come le percentuali usate per le forme semplici.
- */
-export function buildCompoundPathD(
-  clip: { outer: SimpleClipShape; holes: SimpleClipShape[] },
-  canvasSize: { width: number; height: number },
-): string {
-  return [
-    simpleClipShapeToFractionalPath(clip.outer, canvasSize),
-    ...clip.holes.map((hole) => simpleClipShapeToFractionalPath(hole, canvasSize)),
-  ].join(' ')
 }

@@ -2,7 +2,7 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import type { DragEvent, PointerEvent as ReactPointerEvent, ReactElement, WheelEvent } from 'react'
 import type { ProductConfig } from '../../types/product'
 import type { ImageTransform } from '../../hooks/useImageTransform'
-import { buildCompoundPathD, clipAreaToCssClipPath, clipAreaToSvgPath, getClipAreaCenter } from '../../utils/clipShapes'
+import { clipAreaToCssClipPath, clipAreaToSvgPath, getClipAreaCenter, simpleClipAreaToCssClipPath } from '../../utils/clipShapes'
 import UploadPrompt from './UploadPrompt'
 import { playSnap } from '../../utils/sound'
 
@@ -96,21 +96,20 @@ export default function ConfiguratorCanvas({
   )
 
   // Le clip area "compound" (contorno + fori, es. scocca di una console che
-  // deve escludere schermo e pulsanti) non si esprimono con una singola
-  // funzione CSS `clip-path`: servono un `<clipPath>` SVG con
-  // `clip-rule="evenodd"` disegnato nel DOM e un riferimento `url(#id)`.
-  // Un id per-prodotto evita collisioni se in futuro più configuratori
-  // condividessero la stessa pagina.
-  const svgClipDefId = `clip-${product.slug}`
+  // deve escludere schermo e pulsanti) NON si ritagliano con un'unica
+  // regola CSS "contorno meno fori": si applica il ritaglio del solo
+  // CONTORNO ESTERNO all'immagine dell'utente, e per ogni foro si ridisegna
+  // sopra — con il suo stesso identico ritaglio CSS, stavolta semplice — un
+  // frammento della foto originale del prodotto. Il risultato visivo è
+  // identico a un "contorno meno fori", ma senza le fragilità di una
+  // regola evenodd su un unico path con centinaia di punti.
   const isCompoundClip = product.clipArea.type === 'compound'
-  const compoundPathD = useMemo(
-    () => (product.clipArea.type === 'compound' ? buildCompoundPathD(product.clipArea, product.canvas) : null),
-    [product],
+  const holes = product.clipArea.type === 'compound' ? product.clipArea.holes : []
+  const holeClipPaths = useMemo(
+    () => holes.map((hole) => simpleClipAreaToCssClipPath(hole, product.canvas)),
+    [holes, product.canvas],
   )
-  const clipPathCss = useMemo(
-    () => clipAreaToCssClipPath(product.clipArea, product.canvas, svgClipDefId),
-    [product, svgClipDefId],
-  )
+  const clipPathCss = useMemo(() => clipAreaToCssClipPath(product.clipArea, product.canvas), [product])
   const clipOutlineD = useMemo(() => clipAreaToSvgPath(product.clipArea), [product])
   const clipCenter = useMemo(() => getClipAreaCenter(product.clipArea), [product])
 
@@ -339,7 +338,7 @@ export default function ConfiguratorCanvas({
           <div className="absolute inset-0 animate-pulse bg-surface-2" />
         )}
 
-        {/* 2. Area ritagliata: immagine dell'utente oppure invito al caricamento */}
+        {/* 2. Area ritagliata (solo contorno esterno): immagine dell'utente oppure invito al caricamento */}
         <div
           className="absolute inset-0 cursor-pointer"
           style={{
@@ -370,7 +369,25 @@ export default function ConfiguratorCanvas({
           )}
         </div>
 
-        {/* 3. Eventuale livello sopra (vetro/riflesso), non interattivo */}
+        {/* 3. Fori (schermo, D-pad, pulsanti...): ridisegnano sopra un ritaglio
+            della FOTO ORIGINALE del prodotto, "richiudendo" quelle aree così
+            che l'immagine dell'utente non vi compaia mai — nessuna delle due
+            immagini viene mai deformata: entrambe restano alla stessa scala
+            1:1 dell'intero prodotto, cambia solo quale porzione è visibile. */}
+        {baseImageEl &&
+          holeClipPaths.map((holeClip, i) => (
+            <img
+              key={i}
+              src={baseImageEl.src}
+              alt=""
+              aria-hidden="true"
+              draggable={false}
+              className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
+              style={{ clipPath: holeClip }}
+            />
+          ))}
+
+        {/* 4. Eventuale livello sopra (vetro/riflesso), non interattivo */}
         {overlayImageEl && (
           <img
             src={overlayImageEl.src}
@@ -381,20 +398,12 @@ export default function ConfiguratorCanvas({
           />
         )}
 
-        {/* 4. Overlay di editing: griglia, guide, contorno e maniglie */}
+        {/* 5. Overlay di editing: griglia, guide, contorno e maniglie */}
         <svg
           className="absolute inset-0 h-full w-full"
           viewBox={`0 0 ${nativeW} ${nativeH}`}
           style={{ pointerEvents: 'none' }}
         >
-          {isCompoundClip && compoundPathD && (
-            <defs>
-              <clipPath id={svgClipDefId} clipPathUnits="objectBoundingBox">
-                <path d={compoundPathD} clipRule="evenodd" />
-              </clipPath>
-            </defs>
-          )}
-
           {userImage && (
             <rect
               x={0}
