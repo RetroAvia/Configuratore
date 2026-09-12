@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1300" width="1000" height="1300">
+  <!--
+    Illustrazione segnaposto originale di un orologio digitale generico,
+    usata come sfondo di lavoro finché non viene fornita una vera fotografia
+    del Casio F-91W (vedi le istruzioni in src/data/products/casio-f91w.ts).
+    Le coordinate dello schermo qui disegnato corrispondono esattamente a
+    `clipArea` in quel file: x=300 y=380 width=400 height=300 radius=16.
+  -->
+  <defs>
+    <linearGradient id="caseGradient" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2a2c33" />
+      <stop offset="100%" stop-color="#141519" />
+    </linearGradient>
+  </defs>
+
+  <!-- Cinturino superiore -->
+  <polygon points="350,150 650,150 610,40 390,40" fill="#1b1c20" />
+  <!-- Cinturino inferiore -->
+  <polygon points="350,1150 650,1150 610,1260 390,1260" fill="#1b1c20" />
+
+  <!-- Cassa -->
+  <rect x="200" y="150" width="600" height="1000" rx="90" fill="url(#caseGradient)" stroke="#000" stroke-opacity="0.4" stroke-width="2" />
+
+  <!-- Pulsanti -->
+  <rect x="176" y="460" width="26" height="90" rx="8" fill="#101114" />
+  <rect x="176" y="620" width="26" height="90" rx="8" fill="#101114" />
+  <rect x="798" y="460" width="26" height="90" rx="8" fill="#101114" />
+  <rect x="798" y="620" width="26" height="90" rx="8" fill="#101114" />
+
+  <!-- Ghiera dello schermo -->
+  <rect x="270" y="350" width="460" height="360" rx="32" fill="#0c0d10" />
+
+  <!-- Schermo LCD (corrisponde esattamente a clipArea) -->
+  <rect x="300" y="380" width="400" height="300" rx="16" fill="#b9c6b2" />
+  <text x="500" y="565" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="92" font-weight="600" fill="#7c8a76" opacity="0.55">88:88</text>
+
+  <!-- Logo (testo semplice, nessun marchio riprodotto) -->
+  <text x="500" y="880" text-anchor="middle" font-family="'Inter', sans-serif" font-size="34" font-weight="700" letter-spacing="4" fill="#9199a6" opacity="0.5">F-91W</text>
+
+  <!-- Etichetta segnaposto -->
+  <text x="500" y="1290" text-anchor="middle" font-family="'Inter', sans-serif" font-size="22" fill="#5a6270">Immagine segnaposto — sostituisci con una foto reale</text>
+</svg>

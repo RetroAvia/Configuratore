@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <title>Reindirizzamento…</title>
+    <script type="text/javascript">
+      // Trucco per URL puliti con client-side routing su GitHub Pages.
+      // Vedi: https://github.com/rafgraph/spa-github-pages
+      //
+      // "segmentCount" deve corrispondere al numero di segmenti del percorso
+      // "base" impostato in vite.config.ts. Per un repository di progetto
+      // pubblicato su https://<utente>.github.io/<nome-repo>/ il valore
+      // corretto è 1. Se pubblichi come user/organization page (base = "/"),
+      // imposta segmentCount a 0.
+      var segmentCount = 1
+      var l = window.location
+      l.replace(
+        l.protocol +
+          '//' +
+          l.hostname +
+          (l.port ? ':' + l.port : '') +
+          l.pathname
+            .split('/')
+            .slice(0, 1 + segmentCount)
+            .join('/') +
+          '/?/' +
+          l.pathname
+            .slice(1)
+            .split('/')
+            .slice(segmentCount)
+            .join('/')
+            .replace(/&/g, '~and~') +
+          (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+          l.hash
+      )
+    </script>
+  </head>
+  <body></body>
+</html>
