@@ -13,7 +13,7 @@ export default function NotFoundPage() {
       <Link
         to="/"
         className="mt-8 inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:brightness-110"
-        style={{ backgroundImage: 'linear-gradient(90deg, #7c5cff, #22d3ee)' }}
+        style={{ backgroundImage: 'linear-gradient(90deg, #c1272d, #e8b04b)' }}
       >
         Torna alla home
       </Link>

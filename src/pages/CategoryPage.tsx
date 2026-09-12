@@ -3,6 +3,7 @@ import { getCategory } from '../data/categories'
 import { getProductsByCategory } from '../data/products'
 import ProductCard from '../components/cards/ProductCard'
 import NotFoundPage from './NotFoundPage'
+import { playBack } from '../utils/sound'
 
 export default function CategoryPage() {
   const { categorySlug = '' } = useParams()
@@ -16,15 +17,25 @@ export default function CategoryPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
-      <nav aria-label="Percorso di navigazione" className="mb-8 text-sm text-ink-muted">
-        <Link to="/" className="transition-colors hover:text-accent">
-          Home
+      <div className="mb-4 flex items-center justify-between">
+        <Link
+          to="/"
+          onClick={() => playBack()}
+          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3.5 py-1.5 text-sm font-medium text-ink-muted transition-colors hover:border-primary/60 hover:text-ink"
+        >
+          <span aria-hidden="true">←</span>
+          Indietro
         </Link>
-        <span className="mx-2" aria-hidden="true">
-          /
-        </span>
-        <span className="text-ink">{category.name}</span>
-      </nav>
+        <nav aria-label="Percorso di navigazione" className="text-sm text-ink-muted">
+          <Link to="/" className="transition-colors hover:text-accent">
+            Home
+          </Link>
+          <span className="mx-2" aria-hidden="true">
+            /
+          </span>
+          <span className="text-ink">{category.name}</span>
+        </nav>
+      </div>
 
       <div className="max-w-2xl">
         <span aria-hidden="true" className="text-4xl">

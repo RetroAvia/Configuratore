@@ -14,7 +14,7 @@ export default function CategoryCard({ category }: CategoryCardProps) {
       <div
         aria-hidden="true"
         className="absolute -right-8 -top-8 h-32 w-32 rounded-full opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-100"
-        style={{ backgroundImage: 'linear-gradient(135deg, rgba(124,92,255,0.30), rgba(34,211,238,0.20))' }}
+        style={{ backgroundImage: 'linear-gradient(135deg, rgba(193,39,45,0.30), rgba(232,176,75,0.20))' }}
       />
       <span aria-hidden="true" className="mb-4 block text-5xl">
         {category.icon}

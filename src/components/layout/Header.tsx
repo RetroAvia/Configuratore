@@ -1,34 +1,59 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import InstagramIcon from '../icons/InstagramIcon'
+import { isSoundMuted, onSoundMutedChange, playClick, toggleSoundMuted } from '../../utils/sound'
+
+const INSTAGRAM_URL = 'https://www.instagram.com/retroavia_/'
 
 export default function Header() {
+  const [muted, setMuted] = useState(false)
+
+  // Legge lo stato reale (persistito) solo dopo il mount, per evitare un
+  // mismatch fra rendering server/iniziale e localStorage del browser.
+  useEffect(() => {
+    setMuted(isSoundMuted())
+    return onSoundMutedChange(setMuted)
+  }, [])
+
   return (
     <header className="sticky top-0 z-40 border-b border-border/80 bg-page/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Link
           to="/"
-          className="flex items-center gap-2 rounded-lg text-lg font-extrabold tracking-tight text-ink transition-opacity hover:opacity-80"
+          onClick={() => playClick()}
+          className="flex items-center gap-2.5 rounded-lg text-lg font-extrabold tracking-tight text-ink transition-opacity hover:opacity-80"
         >
-          <span
-            aria-hidden="true"
-            className="grid h-9 w-9 place-items-center rounded-xl text-base font-black text-page shadow-[0_0_0_1px_rgba(255,255,255,0.06)]"
-            style={{ backgroundImage: 'linear-gradient(135deg, #7c5cff, #22d3ee)' }}
-          >
-            C
-          </span>
+          <img
+            src="/logo.png"
+            alt="RetroAvia"
+            className="h-9 w-9 rounded-xl object-cover shadow-[0_0_0_1px_rgba(255,255,255,0.06)]"
+          />
           <span>
-            Configura<span className="text-accent">tore</span>
+            RetroAvia <span className="text-accent">Lab</span>
           </span>
         </Link>
 
-        <a
-          href="https://github.com/"
-          target="_blank"
-          rel="noreferrer"
-          className="hidden items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-ink-muted transition-colors hover:border-accent/60 hover:text-ink sm:flex"
-        >
-          <span aria-hidden="true">★</span>
-          Il progetto su GitHub
-        </a>
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <a
+            href={INSTAGRAM_URL}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="RetroAvia su Instagram"
+            title="Seguici su Instagram"
+            className="grid h-10 w-10 place-items-center rounded-full border border-border text-ink-muted transition-colors hover:border-primary/60 hover:text-primary"
+          >
+            <InstagramIcon className="h-5 w-5" />
+          </a>
+          <button
+            type="button"
+            onClick={() => setMuted(toggleSoundMuted())}
+            aria-label={muted ? 'Attiva i suoni' : 'Disattiva i suoni'}
+            title={muted ? 'Attiva i suoni' : 'Disattiva i suoni'}
+            className="grid h-10 w-10 place-items-center rounded-full border border-border text-ink-muted transition-colors hover:border-primary/60 hover:text-primary"
+          >
+            <span aria-hidden="true">{muted ? '🔇' : '🔊'}</span>
+          </button>
+        </div>
       </div>
     </header>
   )

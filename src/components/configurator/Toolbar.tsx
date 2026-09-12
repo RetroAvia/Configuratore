@@ -1,6 +1,7 @@
-import type { ButtonHTMLAttributes } from 'react'
+import type { ButtonHTMLAttributes, MouseEvent } from 'react'
 import { MAX_SCALE, MIN_SCALE } from '../../hooks/useImageTransform'
 import type { ImageTransform } from '../../hooks/useImageTransform'
+import { playClick } from '../../utils/sound'
 
 interface ToolbarProps {
   hasImage: boolean
@@ -19,12 +20,18 @@ interface ToolbarProps {
 
 function IconButton({
   children,
+  onClick,
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement>) {
+  const handleClick = (e: MouseEvent<HTMLButtonElement>) => {
+    playClick()
+    onClick?.(e)
+  }
   return (
     <button
       type="button"
       {...props}
+      onClick={handleClick}
       className={`inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm font-medium text-ink transition-all hover:border-primary/60 hover:bg-surface-2/70 active:scale-95 disabled:pointer-events-none disabled:opacity-40 ${props.className ?? ''}`}
     >
       {children}
@@ -126,30 +133,37 @@ export default function Toolbar({
           <input
             type="checkbox"
             checked={showGrid}
-            onChange={(e) => onToggleGrid(e.target.checked)}
+            onChange={(e) => {
+              playClick()
+              onToggleGrid(e.target.checked)
+            }}
             className="h-4 w-4 accent-primary"
           />
         </label>
         <p className="mt-2 text-xs leading-relaxed text-ink-muted">
           Trascina l'immagine per spostarla, usa le maniglie sugli angoli (o il pizzico a due dita su
           mobile) per ridimensionarla, e la maniglia in alto per ruotarla. Le linee guida azzurre
-          compaiono automaticamente quando l'immagine è centrata.
+          compaiono automaticamente quando l'immagine è centrata. Quando sei soddisfatto, genera il
+          render qui sotto: potrai poi inviarlo a RetroAvia via email o Instagram.
         </p>
       </div>
 
       <button
         type="button"
-        onClick={onExport}
+        onClick={() => {
+          playClick()
+          onExport()
+        }}
         disabled={!hasImage || isExporting}
         className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:brightness-110 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40"
-        style={{ backgroundImage: 'linear-gradient(90deg, #7c5cff, #22d3ee)' }}
+        style={{ backgroundImage: 'linear-gradient(90deg, #c1272d, #e8b04b)' }}
       >
         {isExporting ? (
-          'Sto preparando il file…'
+          'Sto preparando il render…'
         ) : (
           <>
-            <span aria-hidden="true">⬇️</span>
-            Scarica immagine PNG
+            <span aria-hidden="true">📨</span>
+            Genera immagine da inviare
           </>
         )}
       </button>

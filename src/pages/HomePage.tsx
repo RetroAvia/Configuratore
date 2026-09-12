@@ -12,7 +12,7 @@ export default function HomePage() {
           Rendi unico il tuo{' '}
           <span
             className="bg-clip-text text-transparent"
-            style={{ backgroundImage: 'linear-gradient(90deg, #7c5cff, #22d3ee)' }}
+            style={{ backgroundImage: 'linear-gradient(90deg, #c1272d, #e8b04b)' }}
           >
             gadget preferito
           </span>

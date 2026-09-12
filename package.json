@@ -1,9 +1,9 @@
 {
-  "name": "casio-f91w-configurator",
+  "name": "retroavia-lab",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Configuratore grafico 2D, 100% client-side, per personalizzare prodotti (a partire dal Casio F-91W) con un'immagine caricata dall'utente.",
+  "description": "RetroAvia Lab: configuratore grafico 2D, 100% client-side, per personalizzare orologi digitali e console portatili con un'immagine caricata dall'utente.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

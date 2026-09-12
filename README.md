@@ -1,4 +1,4 @@
-# Configuratore — personalizza i tuoi prodotti
+# RetroAvia Lab — personalizza i tuoi prodotti
 
 Web app 100% client-side per personalizzare graficamente dei prodotti — orologi
 digitali (**Casio F-91W**, **Casio A158W**) e console portatili Nintendo

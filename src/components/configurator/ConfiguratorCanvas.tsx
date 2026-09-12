@@ -4,6 +4,7 @@ import type { ProductConfig } from '../../types/product'
 import type { ImageTransform } from '../../hooks/useImageTransform'
 import { buildCompoundPathD, clipAreaToCssClipPath, clipAreaToSvgPath, getClipAreaCenter } from '../../utils/clipShapes'
 import UploadPrompt from './UploadPrompt'
+import { playSnap } from '../../utils/sound'
 
 export interface LoadedUserImage {
   /** Cambia solo quando viene caricata una nuova immagine (usato per il "reset" automatico della trasformazione). */
@@ -189,6 +190,7 @@ export default function ConfiguratorCanvas({
       const snappedY = Math.abs(ny - clipCenter.y) < SNAP_THRESHOLD
       if (snappedX) nx = clipCenter.x
       if (snappedY) ny = clipCenter.y
+      if ((snappedX && !snap.x) || (snappedY && !snap.y)) playSnap()
       setSnap({ x: snappedX, y: snappedY })
       setPosition(nx, ny)
     } else if (modeRef.current === 'pinch' && pinchStartRef.current && pointersRef.current.size >= 2) {
@@ -342,7 +344,7 @@ export default function ConfiguratorCanvas({
           className="absolute inset-0 cursor-pointer"
           style={{
             clipPath: clipPathCss,
-            backgroundColor: userImage ? undefined : product.emptyAreaColor,
+            backgroundColor: userImage || isCompoundClip ? undefined : product.emptyAreaColor,
             fontSize: 'clamp(10px, 2.6cqw, 22px)',
           }}
           onClick={handleEmptyAreaClick}
@@ -364,7 +366,7 @@ export default function ConfiguratorCanvas({
               }}
             />
           ) : (
-            <UploadPrompt isDraggingFile={isDraggingFile} errorMessage={errorMessage} />
+            <UploadPrompt isDraggingFile={isDraggingFile} errorMessage={errorMessage} compact={isCompoundClip} />
           )}
         </div>
 
@@ -411,10 +413,10 @@ export default function ConfiguratorCanvas({
           {gridLines}
 
           {snap.x && (
-            <line x1={clipCenter.x} y1={0} x2={clipCenter.x} y2={nativeH} stroke="#22d3ee" strokeWidth={nativeW * 0.0025} strokeDasharray={`${nativeW * 0.01} ${nativeW * 0.008}`} />
+            <line x1={clipCenter.x} y1={0} x2={clipCenter.x} y2={nativeH} stroke="#e8b04b" strokeWidth={nativeW * 0.0025} strokeDasharray={`${nativeW * 0.01} ${nativeW * 0.008}`} />
           )}
           {snap.y && (
-            <line x1={0} y1={clipCenter.y} x2={nativeW} y2={clipCenter.y} stroke="#22d3ee" strokeWidth={nativeH * 0.0025} strokeDasharray={`${nativeH * 0.01} ${nativeH * 0.008}`} />
+            <line x1={0} y1={clipCenter.y} x2={nativeW} y2={clipCenter.y} stroke="#e8b04b" strokeWidth={nativeH * 0.0025} strokeDasharray={`${nativeH * 0.01} ${nativeH * 0.008}`} />
           )}
 
           <path
@@ -446,7 +448,7 @@ export default function ConfiguratorCanvas({
                   cy={corner.y}
                   r={handleRadius}
                   fill="#ffffff"
-                  stroke="#7c5cff"
+                  stroke="#c1272d"
                   strokeWidth={handleRadius * 0.25}
                   style={{ pointerEvents: 'all', cursor: 'nwse-resize', touchAction: 'none' }}
                   onPointerDown={handleCornerPointerDown}
@@ -460,7 +462,7 @@ export default function ConfiguratorCanvas({
                   cx={rotateHandlePos.x}
                   cy={rotateHandlePos.y}
                   r={handleRadius}
-                  fill="#22d3ee"
+                  fill="#e8b04b"
                   stroke="#ffffff"
                   strokeWidth={handleRadius * 0.25}
                   style={{ pointerEvents: 'all', cursor: 'grab', touchAction: 'none' }}
