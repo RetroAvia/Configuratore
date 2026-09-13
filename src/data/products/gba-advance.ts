@@ -1,4 +1,18 @@
 import type { ProductConfig } from '../../types/product'
+import {
+  livelloDiModificaGroup,
+  etichettaGroup,
+  batteriaUsbCGroup,
+  audioGroup,
+  displayGroup,
+  kitLedGroup,
+  boxPersonalizzatoGroup,
+  coverTrasparenteGroup,
+  gameBoyFornitoGroup,
+  buttonColorGroup,
+  buildColoreScoccaGroup,
+} from '../pricing/consoleOptions'
+import { gbaAdvanceColors } from '../pricing/shellColors'
 
 /**
  * Configurazione del Nintendo Game Boy Advance (originale).
@@ -88,4 +102,23 @@ export const gbaAdvance: ProductConfig = {
   },
   emptyAreaColor: '#dfe3ea',
   exportFileName: 'game-boy-advance-personalizzato.png',
+  pricing: {
+    basePrice: 0,
+    baseLabel: 'Livello di Modifica (base)',
+    groups: [
+      livelloDiModificaGroup,
+      etichettaGroup,
+      batteriaUsbCGroup,
+      audioGroup,
+      displayGroup,
+      kitLedGroup,
+      boxPersonalizzatoGroup,
+      coverTrasparenteGroup,
+      gameBoyFornitoGroup,
+      buildColoreScoccaGroup(gbaAdvanceColors),
+      buttonColorGroup,
+    ],
+    notesPlaceholder:
+      'Vuoi pulsanti di un colore diverso dalla scocca o hai altre richieste particolari? Scrivile qui.',
+  },
 }

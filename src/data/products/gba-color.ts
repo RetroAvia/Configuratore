@@ -1,4 +1,18 @@
 import type { ProductConfig } from '../../types/product'
+import {
+  livelloDiModificaGroup,
+  etichettaGroup,
+  batteriaUsbCGroup,
+  audioGroup,
+  displayGroup,
+  kitLedGroup,
+  boxPersonalizzatoGroup,
+  coverTrasparenteGroup,
+  gameBoyFornitoGroup,
+  buttonColorGroup,
+  buildColoreScoccaGroup,
+} from '../pricing/consoleOptions'
+import { gbaColorColors } from '../pricing/shellColors'
 
 /**
  * Configurazione del Nintendo Game Boy Color.
@@ -110,4 +124,23 @@ export const gbaColor: ProductConfig = {
   },
   emptyAreaColor: '#dfe3ea',
   exportFileName: 'game-boy-color-personalizzato.png',
+  pricing: {
+    basePrice: 0,
+    baseLabel: 'Livello di Modifica (base)',
+    groups: [
+      livelloDiModificaGroup,
+      etichettaGroup,
+      batteriaUsbCGroup,
+      audioGroup,
+      displayGroup,
+      kitLedGroup,
+      boxPersonalizzatoGroup,
+      coverTrasparenteGroup,
+      gameBoyFornitoGroup,
+      buildColoreScoccaGroup(gbaColorColors),
+      buttonColorGroup,
+    ],
+    notesPlaceholder:
+      'Vuoi pulsanti di un colore diverso dalla scocca o hai altre richieste particolari? Scrivile qui.',
+  },
 }

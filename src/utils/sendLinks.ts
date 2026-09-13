@@ -11,20 +11,29 @@ export { RETROAVIA_EMAIL, RETROAVIA_INSTAGRAM_DM, RETROAVIA_INSTAGRAM_PROFILE }
  * all'utente di allegare a mano il render appena scaricato. Il render
  * contiene già l'intero collage (tutte le immagini caricate, composte
  * insieme), quindi basta un solo file da allegare.
+ *
+ * Quando il prodotto ha un pannello Opzioni e Prezzo (`orderSummaryText`),
+ * il riepilogo delle scelte e il totale stimato vengono inclusi nel corpo
+ * dell'email: è l'unico modo per far arrivare a RetroAvia le opzioni scelte,
+ * dato che il sito non ha alcun ordine strutturato lato server.
  */
-export function buildMailtoHref(productName: string): string {
+export function buildMailtoHref(productName: string, orderSummaryText?: string): string {
   const subject = `Idea di personalizzazione – ${productName}`
 
-  const body = [
+  const bodyParts = [
     'Ciao RetroAvia,',
     '',
     `vorrei informazioni per questa personalizzazione: ${productName}.`,
     'Ho scaricato il render finale: lo allego qui sotto.',
-    '',
-    '(Prima di inviare, ricordati di allegare manualmente il file appena scaricato dal browser.)',
-  ].join('\n')
+  ]
 
-  return `mailto:${RETROAVIA_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+  if (orderSummaryText) {
+    bodyParts.push('', 'Ecco le opzioni che ho scelto:', '', orderSummaryText)
+  }
+
+  bodyParts.push('', '(Prima di inviare, ricordati di allegare manualmente il file appena scaricato dal browser.)')
+
+  return `mailto:${RETROAVIA_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyParts.join('\n'))}`
 }
 
 /** Link diretto per aprire una conversazione Instagram con RetroAvia. */

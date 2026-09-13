@@ -1,4 +1,18 @@
 import type { ProductConfig } from '../../types/product'
+import {
+  livelloDiModificaGroup,
+  etichettaGroup,
+  batteriaSpGroup,
+  audioGroup,
+  displayGroup,
+  kitLedGroup,
+  boxPersonalizzatoGroup,
+  coverTrasparenteGroup,
+  gameBoyFornitoGroup,
+  buttonColorGroup,
+  buildColoreScoccaGroup,
+} from '../pricing/consoleOptions'
+import { gbaSpColors } from '../pricing/shellColors'
 
 /**
  * Configurazione del Nintendo Game Boy Advance SP (scocca frontale, chiusa).
@@ -48,4 +62,23 @@ export const gbaSp: ProductConfig = {
   },
   emptyAreaColor: '#c7cdd4',
   exportFileName: 'gba-sp-personalizzato.png',
+  pricing: {
+    basePrice: 0,
+    baseLabel: 'Livello di Modifica (base)',
+    groups: [
+      livelloDiModificaGroup,
+      etichettaGroup,
+      batteriaSpGroup,
+      audioGroup,
+      displayGroup,
+      kitLedGroup,
+      boxPersonalizzatoGroup,
+      coverTrasparenteGroup,
+      gameBoyFornitoGroup,
+      buildColoreScoccaGroup(gbaSpColors),
+      buttonColorGroup,
+    ],
+    notesPlaceholder:
+      'Vuoi pulsanti di un colore diverso dalla scocca o hai altre richieste particolari? Scrivile qui.',
+  },
 }

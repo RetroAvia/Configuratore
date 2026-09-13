@@ -6,7 +6,9 @@ import { getProduct } from '../data/products'
 import NotFoundPage from './NotFoundPage'
 import ConfiguratorCanvas from '../components/configurator/ConfiguratorCanvas'
 import Toolbar from '../components/configurator/Toolbar'
+import PricingPanel from '../components/configurator/PricingPanel'
 import SendPanel from '../components/configurator/SendPanel'
+import StickyTotalBar from '../components/configurator/StickyTotalBar'
 import type { ImageLayer } from '../types/layers'
 import { useHtmlImage } from '../hooks/useHtmlImage'
 import {
@@ -17,7 +19,11 @@ import {
 } from '../hooks/useImageTransform'
 import { ImageLoadError, loadImageFromFile } from '../utils/fileValidation'
 import { downloadBlob, renderProductComposite } from '../utils/exportImage'
-import { playBack, playError, playExportSuccess, playUpload } from '../utils/sound'
+import { renderQuoteCard } from '../utils/exportQuoteCard'
+import { playBack, playClick, playError, playExportSuccess, playUpload } from '../utils/sound'
+import type { PricingSelections } from '../utils/pricing'
+import { buildOrderSummary, computeTotal, formatOrderSummaryText, getDefaultSelections } from '../utils/pricing'
+import { clearPricingDraft, readPricingDraft, savePricingDraft } from '../utils/pricingStorage'
 
 const MAX_LAYERS = 6
 
@@ -45,8 +51,19 @@ export default function ConfiguratorPage() {
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isExporting, setIsExporting] = useState(false)
+  const [isGeneratingQuoteCard, setIsGeneratingQuoteCard] = useState(false)
   const [showGrid, setShowGrid] = useState(false)
   const [lastExportedBlob, setLastExportedBlob] = useState<Blob | null>(null)
+
+  // Scelte correnti nel pannello "Opzioni e Prezzo" (se il prodotto ne ha
+  // uno) e note libere: alimentano sia il totale mostrato a schermo sia il
+  // riepilogo testuale/il biglietto preventivo inviati a RetroAvia. Vengono
+  // anche salvate in automatico (solo queste, MAI le immagini caricate) in
+  // localStorage — vedi `utils/pricingStorage.ts` — così una ricarica
+  // accidentale della pagina non fa perdere 11 gruppi di scelte già fatte.
+  const [pricingSelections, setPricingSelections] = useState<PricingSelections>({})
+  const [notes, setNotes] = useState('')
+  const [draftRestored, setDraftRestored] = useState(false)
 
   const addFileInputRef = useRef<HTMLInputElement>(null)
   const replaceFileInputRef = useRef<HTMLInputElement>(null)
@@ -60,7 +77,9 @@ export default function ConfiguratorPage() {
   }, [layers])
 
   // Reimposta lo stato quando l'utente cambia prodotto (es. tramite i link "indietro/avanti" del browser),
-  // rilasciando tutti gli URL oggetto degli strati del prodotto precedente.
+  // rilasciando tutti gli URL oggetto degli strati del prodotto precedente e
+  // ripartendo dalle opzioni di default del nuovo prodotto — oppure da una
+  // bozza salvata in precedenza per QUESTO stesso prodotto, se presente.
   useEffect(() => {
     setLayers((current) => {
       current.forEach((layer) => URL.revokeObjectURL(layer.image.key))
@@ -69,6 +88,33 @@ export default function ConfiguratorPage() {
     setSelectedLayerId(null)
     setErrorMessage(null)
     setLastExportedBlob(null)
+
+    const pricing = product?.pricing
+    if (pricing) {
+      const draft = readPricingDraft(categorySlug, modelSlug)
+      if (draft) {
+        // Tiene solo le chiavi che esistono ancora nella configurazione
+        // attuale (nel caso i gruppi di opzioni fossero cambiati nel
+        // frattempo), così una bozza vecchia non manda mai in uno stato
+        // incoerente.
+        const validSelections: PricingSelections = {}
+        pricing.groups.forEach((g) => {
+          const saved = draft.selections[g.id]
+          validSelections[g.id] = g.options.some((o) => o.id === saved) ? saved : g.options[0].id
+        })
+        setPricingSelections(validSelections)
+        setNotes(draft.notes)
+        setDraftRestored(true)
+      } else {
+        setPricingSelections(getDefaultSelections(pricing))
+        setNotes('')
+        setDraftRestored(false)
+      }
+    } else {
+      setPricingSelections({})
+      setNotes('')
+      setDraftRestored(false)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categorySlug, modelSlug])
 
@@ -78,6 +124,16 @@ export default function ConfiguratorPage() {
       layersRef.current.forEach((layer) => URL.revokeObjectURL(layer.image.key))
     }
   }, [])
+
+  // Salvataggio automatico (con un piccolo debounce per non scrivere a ogni
+  // singolo carattere digitato nelle note) di sole opzioni/colori/note.
+  useEffect(() => {
+    if (!product?.pricing) return
+    const timeout = setTimeout(() => {
+      savePricingDraft(categorySlug, modelSlug, pricingSelections, notes)
+    }, 400)
+    return () => clearTimeout(timeout)
+  }, [product?.pricing, categorySlug, modelSlug, pricingSelections, notes])
 
   const clipArea = product?.clipArea ?? { type: 'rect' as const, x: 0, y: 0, width: 1, height: 1 }
 
@@ -271,12 +327,58 @@ export default function ConfiguratorPage() {
     downloadBlob(lastExportedBlob, product.exportFileName)
   }, [product, lastExportedBlob])
 
+  const handleSelectPricingOption = useCallback((groupId: string, optionId: string) => {
+    setPricingSelections((current) => ({ ...current, [groupId]: optionId }))
+  }, [])
+
+  const handleDiscardDraft = useCallback(() => {
+    if (!product?.pricing) return
+    clearPricingDraft(categorySlug, modelSlug)
+    setPricingSelections(getDefaultSelections(product.pricing))
+    setNotes('')
+    setDraftRestored(false)
+    playClick()
+  }, [product, categorySlug, modelSlug])
+
+  const handleJumpToOptions = useCallback(() => {
+    document.getElementById('opzioni-e-prezzo')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [])
+
   if (!category || !product) {
     return <NotFoundPage />
   }
 
+  const pricing = product.pricing
+  const total = pricing ? computeTotal(pricing, pricingSelections) : null
+  const orderSummaryLines = pricing ? buildOrderSummary(pricing, pricingSelections) : null
+  const orderSummaryText = pricing ? formatOrderSummaryText(pricing, pricingSelections, notes) : null
+
+  const handleGenerateQuoteCard = async () => {
+    if (!product || !pricing || !lastExportedBlob) return
+    setIsGeneratingQuoteCard(true)
+    setErrorMessage(null)
+    try {
+      const blob = await renderQuoteCard({
+        product,
+        renderBlob: lastExportedBlob,
+        summaryLines: orderSummaryLines ?? [],
+        basePrice: pricing.basePrice,
+        baseLabel: pricing.baseLabel,
+        total: total ?? pricing.basePrice,
+        notes,
+      })
+      downloadBlob(blob, product.exportFileName.replace(/\.png$/, '-preventivo-instagram.png'))
+      playExportSuccess()
+    } catch {
+      playError()
+      setErrorMessage('Non è stato possibile generare il biglietto preventivo. Riprova.')
+    } finally {
+      setIsGeneratingQuoteCard(false)
+    }
+  }
+
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
+    <div className={`mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14 ${pricing ? 'pb-28 lg:pb-14' : ''}`}>
       <input
         ref={addFileInputRef}
         type="file"
@@ -347,10 +449,11 @@ export default function ConfiguratorPage() {
           )}
         </div>
 
-        {/* Intero pannello di controllo (Immagine + Posizionamento + Aiuti +
-            Invia) riunito nella colonna di destra, così la colonna di
-            sinistra è dedicata per intero all'anteprima, che può sfruttare
-            tutto lo spazio disponibile. */}
+        {/* Colonna di destra dedicata alla gestione dell'immagine/collage: le
+            opzioni di prezzo e l'invio, che ora possono contenere molti più
+            contenuti (fino a 11 gruppi di opzioni per le console), vivono in
+            sezioni a piena larghezza subito sotto, per restare leggibili sia
+            da telefono che da computer. */}
         <div className="flex flex-col gap-8">
           <Toolbar
             layers={layers}
@@ -369,18 +472,42 @@ export default function ConfiguratorPage() {
             onToggleGrid={setShowGrid}
             maxLayers={MAX_LAYERS}
           />
-
-          {layers.length > 0 && (
-            <SendPanel
-              productName={product.name}
-              hasGenerated={lastExportedBlob !== null}
-              isExporting={isExporting}
-              onGenerate={handleExport}
-              onDownload={handleDownload}
-            />
-          )}
         </div>
       </div>
+
+      {pricing && (
+        <div className="mt-8">
+          <PricingPanel
+            pricing={pricing}
+            selections={pricingSelections}
+            onSelect={handleSelectPricingOption}
+            notes={notes}
+            onNotesChange={setNotes}
+            draftRestored={draftRestored}
+            onDiscardDraft={handleDiscardDraft}
+          />
+        </div>
+      )}
+
+      {layers.length > 0 && (
+        <div className="mx-auto mt-8 max-w-2xl">
+          <SendPanel
+            productName={product.name}
+            hasGenerated={lastExportedBlob !== null}
+            isExporting={isExporting}
+            onGenerate={handleExport}
+            onDownload={handleDownload}
+            orderSummaryLines={orderSummaryLines}
+            total={total}
+            notes={notes}
+            orderSummaryText={orderSummaryText}
+            onGenerateQuoteCard={handleGenerateQuoteCard}
+            isGeneratingQuoteCard={isGeneratingQuoteCard}
+          />
+        </div>
+      )}
+
+      {pricing && total !== null && <StickyTotalBar total={total} onJumpToOptions={handleJumpToOptions} />}
     </div>
   )
 }

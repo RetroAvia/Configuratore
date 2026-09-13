@@ -61,6 +61,74 @@ export interface CompoundClipShape {
 
 export type ClipShape = SimpleClipShape | CompoundClipShape
 
+/**
+ * Una singola opzione selezionabile all'interno di un gruppo di modifiche
+ * (es. "Con scocca semplice" dentro al gruppo "Livello di Modifica").
+ *
+ * Ogni gruppo si comporta come un set di radio button: in ogni momento è
+ * selezionata esattamente un'opzione (la prima dell'array di default).
+ */
+export interface PriceOptionValue {
+  /** Identificativo univoco dell'opzione all'interno del suo gruppo. */
+  id: string
+  /** Etichetta mostrata all'utente. */
+  label: string
+  /** Emoji mostrata a sinistra dell'etichetta. Alternativa a `color`, per i gruppi che non sono di tipo "colore". */
+  icon?: string
+  /** Colore (hex) mostrato come pallino a sinistra dell'etichetta, per i gruppi "colore scocca/pulsanti". */
+  color?: string
+  /** Se true, il pallino colore viene disegnato con un effetto "trasparente" (bordo tratteggiato + retro a scacchiera), per le finiture Clear/Crystal. */
+  translucent?: boolean
+  /**
+   * Variazione di prezzo (in euro) rispetto a `ProductPricing.basePrice`,
+   * sommata quando questa opzione è quella selezionata nel suo gruppo. Può
+   * essere negativa (es. sconto per chi fornisce il proprio Game Boy).
+   */
+  priceDelta: number
+  /** Nota breve mostrata accanto all'etichetta, tra parentesi (es. "USB-C"). */
+  note?: string
+}
+
+/** Un gruppo di opzioni mutuamente esclusive: esattamente una selezionata, come un set di radio button. */
+export interface PriceOptionGroup {
+  /** Identificativo univoco del gruppo all'interno del prodotto. */
+  id: string
+  /** Titolo del gruppo, mostrato come intestazione del riquadro. */
+  title: string
+  /** Emoji mostrata accanto al titolo del gruppo. */
+  icon: string
+  options: PriceOptionValue[]
+  /** Testo informativo opzionale mostrato sotto il titolo del gruppo. */
+  helperText?: string
+  /**
+   * Se true, il riquadro del gruppo viene evidenziato graficamente (bordo e
+   * titolo in evidenza): usato per opzioni particolari come "Game Boy
+   * fornito dal cliente", che modificano lo sconto in modo importante.
+   */
+  highlighted?: boolean
+  /**
+   * Testo opzionale mostrato in un piccolo popover "ⓘ" accanto al titolo del
+   * gruppo: usato per i gruppi meno immediati per chi non conosce il gergo
+   * del modding (es. cosa sia un "Kit LED" o un pannello "IPS V3").
+   */
+  info?: string
+}
+
+/**
+ * Configurazione prezzi/opzioni di un prodotto: alimenta il pannello
+ * "Opzioni e Prezzo" mostrato nella pagina del configuratore, che calcola in
+ * tempo reale il totale in base alle scelte dell'utente.
+ */
+export interface ProductPricing {
+  /** Prezzo di partenza (in euro), a cui si sommano le variazioni di tutte le opzioni selezionate. */
+  basePrice: number
+  /** Etichetta mostrata accanto al prezzo di partenza nel riepilogo (es. "Immagine personalizzata"). */
+  baseLabel: string
+  groups: PriceOptionGroup[]
+  /** Testo segnaposto del campo note libere, mostrato sotto ai gruppi di opzioni. */
+  notesPlaceholder: string
+}
+
 export interface ProductConfig {
   /** Identificativo univoco del prodotto, usato come slug nell'URL. */
   slug: string
@@ -103,6 +171,11 @@ export interface ProductConfig {
   emptyAreaColor?: string
   /** Nome del file suggerito per il download del risultato finale (es. "casio-f91w-personalizzato.png"). */
   exportFileName: string
+  /**
+   * Configurazione opzionale del pannello "Opzioni e Prezzo". Se omessa, il
+   * configuratore non mostra alcun calcolo prezzo per questo prodotto.
+   */
+  pricing?: ProductPricing
 }
 
 export interface CategoryConfig {

@@ -113,3 +113,54 @@ input[type='range']::-moz-range-thumb {
   border: 2px solid var(--color-page);
   cursor: pointer;
 }
+
+/*
+ * Pallino "vetro" per i colori scocca con finitura trasparente
+ * (Clear/Crystal): un effetto lucido/traslucido ottenuto solo con CSS
+ * (gradiente + luce riflessa + ombra interna), senza bisogno di foto reali
+ * per ogni singola finitura.
+ */
+.swatch-glass {
+  position: relative;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255,255,255,0.75), transparent 42%),
+    linear-gradient(155deg, color-mix(in srgb, var(--swatch-color) 45%, white 20%), var(--swatch-color) 75%);
+  box-shadow:
+    inset 0 1px 3px rgba(255,255,255,0.5),
+    inset 0 -3px 5px rgba(0,0,0,0.3),
+    0 0 0 1px rgba(255,255,255,0.15);
+}
+
+/* Anello che si espande brevemente quando un'opzione del pannello Opzioni e Prezzo viene selezionata. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes option-select-ring {
+    from {
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 60%, transparent);
+    }
+    to {
+      box-shadow: 0 0 0 9px color-mix(in srgb, var(--color-accent) 0%, transparent);
+    }
+  }
+  .animate-option-select {
+    animation: option-select-ring 550ms ease-out;
+  }
+
+  /* Piccolo "pop" di conferma quando si carica un'immagine o si genera il render. */
+  @keyframes gentle-pop {
+    0% { transform: scale(0.92); opacity: 0; }
+    60% { transform: scale(1.02); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .animate-gentle-pop {
+    animation: gentle-pop 320ms ease-out;
+  }
+
+  /* Transizione morbida tra una pagina e l'altra (home → categoria → configuratore). */
+  @keyframes page-fade-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-page-in {
+    animation: page-fade-in 280ms ease-out;
+  }
+}

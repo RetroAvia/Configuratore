@@ -30,4 +30,20 @@ export const casioA158w: ProductConfig = {
   },
   emptyAreaColor: '#8a9a8f',
   exportFileName: 'casio-a158w-personalizzato.png',
+  pricing: {
+    basePrice: 54.9,
+    baseLabel: 'Immagine Personalizzata',
+    groups: [
+      {
+        id: 'box',
+        title: 'Box',
+        icon: '📦',
+        options: [
+          { id: 'no', label: 'No', icon: '🚫', priceDelta: 0 },
+          { id: 'si', label: 'Sì, aggiungi il box', icon: '🎁', priceDelta: 10 },
+        ],
+      },
+    ],
+    notesPlaceholder: 'Hai richieste particolari per la tua personalizzazione? Scrivile qui.',
+  },
 }

@@ -1,0 +1,56 @@
+import { useEffect, useRef, useState } from 'react'
+
+/**
+ * Piccolo pulsante "ⓘ" che mostra una spiegazione al tocco/click — usato
+ * accanto ai titoli dei gruppi meno immediati (Kit LED, Display, Box 3D...)
+ * per chi non mastica il gergo del modding. Click-to-toggle invece di solo
+ * hover: su mobile l'hover non esiste, quindi deve funzionare anche al tocco.
+ */
+export default function InfoTooltip({ text }: { text: string }) {
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const handlePointerDown = (e: PointerEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [open])
+
+  return (
+    <div ref={containerRef} className="relative inline-flex">
+      <button
+        type="button"
+        aria-label="Maggiori informazioni"
+        aria-expanded={open}
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          setOpen((v) => !v)
+        }}
+        className="grid h-4 w-4 shrink-0 place-items-center rounded-full border border-border text-[10px] font-bold leading-none text-ink-muted transition-colors hover:border-accent hover:text-accent"
+      >
+        i
+      </button>
+      {open && (
+        <div
+          role="tooltip"
+          className="absolute left-1/2 top-full z-20 mt-2 w-56 -translate-x-1/2 rounded-xl border border-border bg-page p-3 text-xs leading-relaxed text-ink-muted shadow-2xl"
+        >
+          {text}
+        </div>
+      )}
+    </div>
+  )
+}
