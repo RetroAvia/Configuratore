@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { getCategory } from '../data/categories'
@@ -22,8 +22,19 @@ import { downloadBlob, renderProductComposite } from '../utils/exportImage'
 import { renderQuoteCard } from '../utils/exportQuoteCard'
 import { playBack, playClick, playError, playExportSuccess, playUpload } from '../utils/sound'
 import type { PricingSelections } from '../utils/pricing'
-import { buildOrderSummary, computeTotal, formatOrderSummaryText, getDefaultSelections } from '../utils/pricing'
+import {
+  buildOrderSummary,
+  computeTotal,
+  formatOrderSummaryText,
+  formatTotal,
+  getDefaultSelections,
+  getStartingPrice,
+} from '../utils/pricing'
 import { clearPricingDraft, readPricingDraft, savePricingDraft } from '../utils/pricingStorage'
+import { usePageMeta } from '../hooks/usePageMeta'
+import { useStructuredData } from '../hooks/useStructuredData'
+import { useLanguage } from '../i18n/LanguageContext'
+import type { TranslationKey } from '../i18n/translations'
 
 const MAX_LAYERS = 6
 
@@ -33,6 +44,28 @@ function createLayerId(): string {
   return `layer-${Date.now()}-${layerIdCounter}`
 }
 
+/**
+ * Ricostruisce il messaggio d'errore di un `ImageLoadError` nella lingua
+ * corrente, a partire dal codice e dai dati strutturati in `err.meta`
+ * (vedi `utils/fileValidation.ts`) invece che dal suo `.message`, che resta
+ * sempre in italiano (è il fallback usato quando manca il contesto per
+ * tradurlo, es. se l'errore venisse loggato altrove).
+ */
+function getImageErrorMessage(
+  err: ImageLoadError,
+  t: (key: TranslationKey, vars?: Record<string, string | number>) => string,
+): string {
+  switch (err.code) {
+    case 'unsupported-type':
+      return t('errors.unsupportedType', { fileType: err.meta?.fileType ?? '' })
+    case 'too-large':
+      return t('errors.tooLarge', { sizeMB: err.meta?.sizeMB ?? '', maxMB: err.meta?.maxMB ?? '' })
+    case 'decode-error':
+    default:
+      return t('errors.decodeError')
+  }
+}
+
 export default function ConfiguratorPage() {
   const { categorySlug = '', modelSlug = '' } = useParams()
   const [searchParams] = useSearchParams()
@@ -40,6 +73,49 @@ export default function ConfiguratorPage() {
 
   const category = getCategory(categorySlug)
   const product = category ? getProduct(categorySlug, modelSlug) : undefined
+  const { t, tr, locale } = useLanguage()
+
+  usePageMeta({
+    title: product ? `${product.name} — RetroAvia Lab` : t('configuratorPage.notFoundMetaTitle'),
+    description: product
+      ? t('configuratorPage.metaDescription', {
+          productName: product.name,
+          priceText: product.pricing
+            ? t('configuratorPage.metaPriceSuffix', { price: formatTotal(getStartingPrice(product.pricing), locale) })
+            : '',
+          description: tr(product.description, product.descriptionI18n),
+        })
+      : undefined,
+  })
+
+  // Dati strutturati Schema.org (Product + prezzo di partenza), per aiutare
+  // Google a capire di cosa parla la pagina.
+  const structuredData = useMemo(() => {
+    if (!product) return null
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: product.name,
+      description: product.description,
+      image: `https://configuratore-five.vercel.app${product.thumbnail}`,
+      brand: {
+        '@type': 'Brand',
+        name: 'RetroAvia Lab',
+      },
+      ...(product.pricing
+        ? {
+            offers: {
+              '@type': 'Offer',
+              priceCurrency: 'EUR',
+              price: getStartingPrice(product.pricing).toFixed(2),
+              availability: 'https://schema.org/InStock',
+              url: `https://configuratore-five.vercel.app/${product.categorySlug}/${product.slug}`,
+            },
+          }
+        : {}),
+    }
+  }, [product])
+  useStructuredData(structuredData)
 
   const baseImageEl = useHtmlImage(product?.baseImage)
   const overlayImageEl = useHtmlImage(product?.overlayImage)
@@ -151,12 +227,14 @@ export default function ConfiguratorPage() {
       const availableSlots = MAX_LAYERS - layers.length
       if (availableSlots <= 0) {
         playError()
-        setErrorMessage(`Puoi aggiungere al massimo ${MAX_LAYERS} immagini.`)
+        setErrorMessage(t('configuratorPage.errorMaxLayers', { max: MAX_LAYERS }))
         return
       }
       const filesToAdd = files.slice(0, availableSlots)
       if (files.length > filesToAdd.length) {
-        setErrorMessage(`Puoi aggiungere al massimo ${MAX_LAYERS} immagini: ho caricato solo le prime ${filesToAdd.length}.`)
+        setErrorMessage(
+          t('configuratorPage.errorMaxLayersPartial', { max: MAX_LAYERS, added: filesToAdd.length }),
+        )
       } else {
         setErrorMessage(null)
       }
@@ -182,14 +260,14 @@ export default function ConfiguratorPage() {
           .catch((err: unknown) => {
             playError()
             if (err instanceof ImageLoadError) {
-              setErrorMessage(err.message)
+              setErrorMessage(getImageErrorMessage(err, t))
             } else {
-              setErrorMessage("Si è verificato un errore imprevisto durante il caricamento di un'immagine.")
+              setErrorMessage(t('configuratorPage.errorUnexpectedAdd'))
             }
           })
       })
     },
-    [layers, clipArea],
+    [layers, clipArea, t],
   )
 
   /** Sostituisce solo la FOTO di uno strato esistente, mantenendone posizione e rotazione. */
@@ -219,12 +297,12 @@ export default function ConfiguratorPage() {
       .catch((err: unknown) => {
         playError()
         if (err instanceof ImageLoadError) {
-          setErrorMessage(err.message)
+          setErrorMessage(getImageErrorMessage(err, t))
         } else {
-          setErrorMessage("Si è verificato un errore imprevisto durante il caricamento dell'immagine.")
+          setErrorMessage(t('configuratorPage.errorUnexpectedReplace'))
         }
       })
-  }, [])
+  }, [t])
 
   const handleRemoveLayer = useCallback(
     (id: string) => {
@@ -316,11 +394,11 @@ export default function ConfiguratorPage() {
       playExportSuccess()
     } catch {
       playError()
-      setErrorMessage("Non è stato possibile generare l'immagine finale. Riprova.")
+      setErrorMessage(t('configuratorPage.errorExport'))
     } finally {
       setIsExporting(false)
     }
-  }, [product, baseImageEl, layers, overlayImageEl])
+  }, [product, baseImageEl, layers, overlayImageEl, t])
 
   const handleDownload = useCallback(() => {
     if (!product || !lastExportedBlob) return
@@ -350,7 +428,11 @@ export default function ConfiguratorPage() {
 
   const pricing = product.pricing
   const total = pricing ? computeTotal(pricing, pricingSelections) : null
-  const orderSummaryLines = pricing ? buildOrderSummary(pricing, pricingSelections) : null
+  // Il riepilogo mostrato a schermo (`orderSummaryLines`) è tradotto nella
+  // lingua corrente per il cliente; il testo inviato via email/Instagram
+  // (`orderSummaryText`, tramite `formatOrderSummaryText`) resta invece
+  // sempre in italiano di proposito, perché è indirizzato a RetroAvia.
+  const orderSummaryLines = pricing ? buildOrderSummary(pricing, pricingSelections, locale) : null
   const orderSummaryText = pricing ? formatOrderSummaryText(pricing, pricingSelections, notes) : null
 
   const handleGenerateQuoteCard = async () => {
@@ -371,7 +453,7 @@ export default function ConfiguratorPage() {
       playExportSuccess()
     } catch {
       playError()
-      setErrorMessage('Non è stato possibile generare il biglietto preventivo. Riprova.')
+      setErrorMessage(t('configuratorPage.errorQuoteCard'))
     } finally {
       setIsGeneratingQuoteCard(false)
     }
@@ -402,17 +484,17 @@ export default function ConfiguratorPage() {
           className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3.5 py-1.5 text-sm font-medium text-ink-muted transition-colors hover:border-primary/60 hover:text-ink"
         >
           <span aria-hidden="true">←</span>
-          Indietro
+          {t('categoryPage.back')}
         </Link>
-        <nav aria-label="Percorso di navigazione" className="text-sm text-ink-muted">
+        <nav aria-label={t('categoryPage.breadcrumbAria')} className="text-sm text-ink-muted">
           <Link to="/" className="transition-colors hover:text-accent">
-            Home
+            {t('categoryPage.breadcrumbHome')}
           </Link>
           <span className="mx-2" aria-hidden="true">
             /
           </span>
           <Link to={`/${category.slug}`} className="transition-colors hover:text-accent">
-            {category.name}
+            {tr(category.name, category.nameI18n)}
           </Link>
           <span className="mx-2" aria-hidden="true">
             /
@@ -423,7 +505,7 @@ export default function ConfiguratorPage() {
 
       <div className="max-w-2xl">
         <h1 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">{product.name}</h1>
-        <p className="mt-3 text-ink-muted">{product.description}</p>
+        <p className="mt-3 text-ink-muted">{tr(product.description, product.descriptionI18n)}</p>
       </div>
 
       <div className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">

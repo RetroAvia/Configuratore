@@ -2,7 +2,10 @@
 <html lang="it">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.json" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#120e0c" />
     <meta
@@ -10,6 +13,33 @@
       content="RetroAvia Lab: personalizza orologi digitali Casio e console portatili Nintendo con una tua immagine. Carica, posiziona, ruota e scarica il risultato — tutto nel browser, gratis."
     />
     <title>RetroAvia Lab — Personalizza i tuoi prodotti</title>
+
+    <!--
+      Open Graph / Twitter Card: anteprima statica mostrata quando un link
+      del sito viene condiviso su Instagram, WhatsApp, email, ecc. Essendo
+      un'app 100% client-side (senza server che genera pagine su misura),
+      questa anteprima è sempre la stessa per qualunque pagina del sito —
+      non cambia in base al prodotto aperto. È comunque molto meglio di
+      nessuna anteprima, che è la situazione attuale.
+    -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="RetroAvia Lab" />
+    <meta property="og:title" content="RetroAvia Lab — Personalizza i tuoi prodotti" />
+    <meta
+      property="og:description"
+      content="Personalizza orologi digitali Casio e console portatili Nintendo con una tua immagine: gratis, veloce e senza installare nulla."
+    />
+    <meta property="og:image" content="https://configuratore-five.vercel.app/og-image.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:url" content="https://configuratore-five.vercel.app/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="RetroAvia Lab — Personalizza i tuoi prodotti" />
+    <meta
+      name="twitter:description"
+      content="Personalizza orologi digitali Casio e console portatili Nintendo con una tua immagine: gratis, veloce e senza installare nulla."
+    />
+    <meta name="twitter:image" content="https://configuratore-five.vercel.app/og-image.jpg" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -27,23 +57,19 @@
       ripristina l'URL originale tramite la History API.
       Tecnica: https://github.com/rafgraph/spa-github-pages
     -->
-    <script type="text/javascript">
-      (function (l) {
-        if (l.search[1] === '/') {
-          var decoded = l.search
-            .slice(1)
-            .split('&')
-            .map(function (s) {
-              return s.replace(/~and~/g, '&')
-            })
-            .join('?')
-          window.history.replaceState(null, null, l.pathname.slice(0, -1) + decoded + l.hash)
-        }
-      })(window.location)
-    </script>
+    <script src="/spa-redirect.js"></script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+
+    <!--
+      Vercel Web Analytics: statistiche di visita rispettose della privacy
+      (nessun cookie), per capire quante persone visitano il sito e da dove
+      arrivano. Per iniziare a raccogliere dati va anche attivata una volta
+      sola la voce "Analytics" nelle impostazioni del progetto su Vercel.
+    -->
+    <script src="/vercel-analytics-init.js"></script>
+    <script defer src="/_vercel/insights/script.js"></script>
   </body>
 </html>

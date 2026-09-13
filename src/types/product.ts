@@ -6,6 +6,7 @@
  * in `src/data/products/*.ts`. Aggiungere un nuovo prodotto o una nuova
  * categoria NON richiede mai di modificare questo file.
  */
+import type { Localized } from '../i18n/locale'
 
 /**
  * Forma "semplice" dell'area di ritaglio — un singolo contorno, senza fori.
@@ -87,6 +88,10 @@ export interface PriceOptionValue {
   priceDelta: number
   /** Nota breve mostrata accanto all'etichetta, tra parentesi (es. "USB-C"). */
   note?: string
+  /** Traduzioni di `label` per le lingue diverse dall'italiano (vedi `tr()` in `i18n/locale.ts`). */
+  labelI18n?: Localized
+  /** Traduzioni di `note`. */
+  noteI18n?: Localized
 }
 
 /** Un gruppo di opzioni mutuamente esclusive: esattamente una selezionata, come un set di radio button. */
@@ -112,6 +117,12 @@ export interface PriceOptionGroup {
    * del modding (es. cosa sia un "Kit LED" o un pannello "IPS V3").
    */
   info?: string
+  /** Traduzioni di `title`. */
+  titleI18n?: Localized
+  /** Traduzioni di `helperText`. */
+  helperTextI18n?: Localized
+  /** Traduzioni di `info`. */
+  infoI18n?: Localized
 }
 
 /**
@@ -127,6 +138,8 @@ export interface ProductPricing {
   groups: PriceOptionGroup[]
   /** Testo segnaposto del campo note libere, mostrato sotto ai gruppi di opzioni. */
   notesPlaceholder: string
+  /** Traduzioni di `notesPlaceholder`. */
+  notesPlaceholderI18n?: Localized
 }
 
 export interface ProductConfig {
@@ -138,6 +151,8 @@ export interface ProductConfig {
   categorySlug: string
   /** Breve descrizione mostrata nelle card e nella pagina del configuratore. */
   description: string
+  /** Traduzioni di `description` (il `name`, essendo un nome di modello/marchio, resta invariato in ogni lingua). */
+  descriptionI18n?: Localized
   /**
    * Percorso (in `public/`) dell'immagine miniatura usata nelle card di
    * elenco. Può coincidere con `baseImage` se non hai ancora una miniatura
@@ -187,4 +202,8 @@ export interface CategoryConfig {
   description: string
   /** Emoji o breve simbolo usato come icona nella home (nessun asset da caricare). */
   icon: string
+  /** Traduzioni di `name`. */
+  nameI18n?: Localized
+  /** Traduzioni di `description`. */
+  descriptionI18n?: Localized
 }

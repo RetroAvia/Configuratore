@@ -1,0 +1,15 @@
+{
+  "name": "RetroAvia Lab",
+  "short_name": "RetroAvia Lab",
+  "description": "Personalizza orologi digitali Casio e console portatili Nintendo con una tua immagine, gratis e nel browser.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#120e0c",
+  "theme_color": "#120e0c",
+  "lang": "it",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

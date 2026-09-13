@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://configuratore-five.vercel.app/sitemap.xml

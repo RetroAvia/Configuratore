@@ -28,6 +28,14 @@
 
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+
+  /*
+   * Curva di easing "fluida" (ease-out-quint-like): parte veloce e
+   * rallenta dolcemente in fondo, la sensazione più naturale per hover,
+   * comparse a scorrimento e transizioni tra pagine. Usata al posto del
+   * default `ease` di Tailwind ovunque serva un movimento più morbido.
+   */
+  --ease-fluid: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 html {
@@ -162,5 +170,79 @@ input[type='range']::-moz-range-thumb {
   }
   .animate-page-in {
     animation: page-fade-in 280ms ease-out;
+  }
+}
+
+/*
+ * Comparsa "a scorrimento": gli elementi con classe .reveal partono
+ * leggermente più in basso e trasparenti, poi scattano a posto quando
+ * entrano nel viewport (vedi hook `useScrollReveal`). Se JS non aggiunge
+ * mai .reveal-visible (browser molto vecchi) o l'utente preferisce meno
+ * movimento, il contenuto resta comunque visibile fin da subito.
+ */
+.reveal {
+  opacity: 0;
+  transform: translateY(22px);
+}
+.reveal-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .reveal {
+    transition: opacity 700ms var(--ease-fluid), transform 700ms var(--ease-fluid);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/*
+ * Macchie di colore morbide e lentissime sullo sfondo dell'hero, per dare
+ * un minimo di vita alla pagina senza distrarre: solo opacity/transform
+ * (accelerate via GPU), mai proprietà che costringono al reflow.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes drift-a {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(4%, 6%) scale(1.08); }
+  }
+  @keyframes drift-b {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(-5%, -4%) scale(1.1); }
+  }
+  .animate-drift-a {
+    animation: drift-a 22s var(--ease-fluid) infinite;
+  }
+  .animate-drift-b {
+    animation: drift-b 26s var(--ease-fluid) infinite;
+  }
+}
+
+/*
+ * Linea che collega i pallini numerati di "Come funziona": visibile solo a
+ * partire dal breakpoint "lg" di Tailwind (64rem), l'unico in cui i 4
+ * passi stanno tutti su una riga sola — sotto quella larghezza vanno a
+ * capo su più righe e la linea non avrebbe senso.
+ */
+@media (min-width: 64rem) {
+  .step-connector::after {
+    content: '';
+    position: absolute;
+    top: 1.5rem;
+    left: calc(50% + 1.75rem);
+    width: calc(100% - 3.5rem);
+    height: 1.5px;
+    background: linear-gradient(
+      90deg,
+      var(--color-border),
+      color-mix(in srgb, var(--color-accent) 40%, var(--color-border))
+    );
+  }
+  .step-connector:last-child::after {
+    display: none;
   }
 }

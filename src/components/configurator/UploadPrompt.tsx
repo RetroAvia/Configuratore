@@ -1,3 +1,5 @@
+import { useLanguage } from '../../i18n/LanguageContext'
+
 interface UploadPromptProps {
   isDraggingFile: boolean
   errorMessage?: string | null
@@ -20,6 +22,7 @@ interface UploadPromptProps {
  * già ritagliato (`clip-path`) in ConfiguratorCanvas.
  */
 export default function UploadPrompt({ isDraggingFile, errorMessage, compact = false }: UploadPromptProps) {
+  const { t } = useLanguage()
   if (compact) {
     return (
       <div className="absolute inset-0 flex items-center justify-center p-3">
@@ -32,9 +35,9 @@ export default function UploadPrompt({ isDraggingFile, errorMessage, compact = f
             🖼️
           </span>
           <p className="text-[0.8em] font-semibold leading-tight text-white">
-            {isDraggingFile ? 'Rilascia qui' : 'Tocca per caricare la tua immagine'}
+            {isDraggingFile ? t('uploadPrompt.compactDrop') : t('uploadPrompt.compactTap')}
           </p>
-          <p className="text-[0.62em] leading-tight text-white/70">JPG, PNG o WEBP</p>
+          <p className="text-[0.62em] leading-tight text-white/70">{t('uploadPrompt.formats')}</p>
           {errorMessage && (
             <p role="alert" className="mt-1 max-w-[16em] text-[0.62em] font-medium leading-tight text-danger">
               {errorMessage}
@@ -55,10 +58,10 @@ export default function UploadPrompt({ isDraggingFile, errorMessage, compact = f
         🖼️
       </span>
       <p className="text-[0.85em] font-semibold leading-tight text-white">
-        {isDraggingFile ? 'Rilascia qui la tua immagine' : 'Trascina qui una tua immagine'}
+        {isDraggingFile ? t('uploadPrompt.fullDrop') : t('uploadPrompt.fullDrag')}
       </p>
-      <p className="text-[0.7em] leading-tight text-white/75">oppure tocca per selezionarne una</p>
-      <p className="text-[0.6em] leading-tight text-white/55">JPG, PNG o WEBP</p>
+      <p className="text-[0.7em] leading-tight text-white/75">{t('uploadPrompt.orTap')}</p>
+      <p className="text-[0.6em] leading-tight text-white/55">{t('uploadPrompt.formats')}</p>
       {errorMessage && (
         <p role="alert" className="mt-1 max-w-[90%] text-[0.65em] font-medium leading-tight text-danger">
           {errorMessage}

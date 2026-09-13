@@ -13,12 +13,24 @@ export const categories: CategoryConfig[] = [
     name: 'Orologi',
     description: 'Personalizza il quadrante dei tuoi orologi digitali preferiti.',
     icon: '⌚',
+    nameI18n: { en: 'Watches', es: 'Relojes', fr: 'Montres' },
+    descriptionI18n: {
+      en: 'Customize the dial of your favorite digital watches.',
+      es: 'Personaliza la esfera de tus relojes digitales favoritos.',
+      fr: 'Personnalisez le cadran de vos montres digitales préférées.',
+    },
   },
   {
     slug: 'console',
     name: 'Console',
     description: 'Dai un nuovo stile alle tue console portatili preferite.',
     icon: '🎮',
+    nameI18n: { en: 'Consoles', es: 'Consolas', fr: 'Consoles' },
+    descriptionI18n: {
+      en: 'Give your favorite handheld consoles a brand new look.',
+      es: 'Dale un nuevo estilo a tus consolas portátiles favoritas.',
+      fr: 'Offrez un nouveau look à vos consoles portables préférées.',
+    },
   },
 ]
 

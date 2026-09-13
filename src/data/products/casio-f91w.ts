@@ -16,9 +16,14 @@ export const casioF91w: ProductConfig = {
   categorySlug: 'orologi',
   description:
     "L'iconico orologio digitale Casio. Carica una tua immagine e personalizza il quadrante a modo tuo.",
-  thumbnail: '/products/casio-f91w/base.png',
-  baseImage: '/products/casio-f91w/base.png',
-  overlayImage: '/products/casio-f91w/overlay.png',
+  descriptionI18n: {
+    en: 'The iconic Casio digital watch. Upload your own image and customize the dial your way.',
+    es: 'El icónico reloj digital de Casio. Sube tu propia imagen y personaliza la esfera a tu gusto.',
+    fr: 'La montre digitale iconique de Casio. Importez votre image et personnalisez le cadran à votre façon.',
+  },
+  thumbnail: '/products/casio-f91w/base.webp',
+  baseImage: '/products/casio-f91w/base.webp',
+  overlayImage: '/products/casio-f91w/overlay.webp',
   canvas: {
     width: 1114,
     height: 2021,
@@ -48,5 +53,10 @@ export const casioF91w: ProductConfig = {
       },
     ],
     notesPlaceholder: 'Hai richieste particolari per la tua personalizzazione? Scrivile qui.',
+    notesPlaceholderI18n: {
+      en: 'Any special requests for your customization? Write them here.',
+      es: '¿Tienes peticiones especiales para tu personalización? Escríbelas aquí.',
+      fr: 'Des demandes particulières pour votre personnalisation ? Écrivez-les ici.',
+    },
   },
 }

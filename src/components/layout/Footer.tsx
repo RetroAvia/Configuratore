@@ -1,9 +1,11 @@
 import InstagramIcon from '../icons/InstagramIcon'
+import { useLanguage } from '../../i18n/LanguageContext'
 import { playClick } from '../../utils/sound'
 
 const INSTAGRAM_URL = 'https://www.instagram.com/retroavia_/'
 
 export default function Footer() {
+  const { t } = useLanguage()
   return (
     <footer className="border-t border-border/80 py-14">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -24,11 +26,9 @@ export default function Footer() {
                 className="h-16 w-16 rounded-2xl shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
               />
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-accent">Seguici in volo</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-accent">{t('footer.eyebrow')}</p>
                 <h2 className="text-xl font-extrabold tracking-tight text-ink">RetroAvia</h2>
-                <p className="mt-1 text-sm text-ink-muted">
-                  Nuovi modelli, personalizzazioni e retroscena direttamente dal laboratorio.
-                </p>
+                <p className="mt-1 text-sm text-ink-muted">{t('footer.subtitle')}</p>
               </div>
             </div>
             <a
@@ -46,11 +46,8 @@ export default function Footer() {
         </div>
 
         <div className="mt-8 text-center text-sm text-ink-muted">
-          <p>
-            RetroAvia Lab è realizzato interamente lato client: nessuna immagine caricata lascia mai il tuo
-            browser.
-          </p>
-          <p className="mt-1">© {new Date().getFullYear()} RetroAvia Lab.</p>
+          <p>{t('footer.privacyNote')}</p>
+          <p className="mt-1">{t('footer.copyright', { year: new Date().getFullYear() })}</p>
         </div>
       </div>
     </footer>

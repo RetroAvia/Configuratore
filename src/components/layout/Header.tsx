@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import InstagramIcon from '../icons/InstagramIcon'
+import LanguageSwitcher from './LanguageSwitcher'
+import { useLanguage } from '../../i18n/LanguageContext'
 import { isSoundMuted, onSoundMutedChange, playClick, toggleSoundMuted } from '../../utils/sound'
 
 const INSTAGRAM_URL = 'https://www.instagram.com/retroavia_/'
 
 export default function Header() {
   const [muted, setMuted] = useState(false)
+  const { t } = useLanguage()
 
   // Legge lo stato reale (persistito) solo dopo il mount, per evitare un
   // mismatch fra rendering server/iniziale e localStorage del browser.
@@ -38,8 +41,8 @@ export default function Header() {
             href={INSTAGRAM_URL}
             target="_blank"
             rel="noreferrer"
-            aria-label="RetroAvia su Instagram"
-            title="Seguici su Instagram"
+            aria-label={t('header.instagramAria')}
+            title={t('header.instagramTitle')}
             className="grid h-10 w-10 place-items-center rounded-full border border-border text-ink-muted transition-colors hover:border-primary/60 hover:text-primary"
           >
             <InstagramIcon className="h-5 w-5" />
@@ -47,12 +50,13 @@ export default function Header() {
           <button
             type="button"
             onClick={() => setMuted(toggleSoundMuted())}
-            aria-label={muted ? 'Attiva i suoni' : 'Disattiva i suoni'}
-            title={muted ? 'Attiva i suoni' : 'Disattiva i suoni'}
+            aria-label={muted ? t('header.unmute') : t('header.mute')}
+            title={muted ? t('header.unmute') : t('header.mute')}
             className="grid h-10 w-10 place-items-center rounded-full border border-border text-ink-muted transition-colors hover:border-primary/60 hover:text-primary"
           >
             <span aria-hidden="true">{muted ? '🔇' : '🔊'}</span>
           </button>
+          <LanguageSwitcher />
         </div>
       </div>
     </header>

@@ -13,9 +13,14 @@ export const casioA158w: ProductConfig = {
   categorySlug: 'orologi',
   description:
     "Il classico Casio in acciaio con display digitale. Personalizza il quadrante con una tua immagine.",
-  thumbnail: '/products/casio-a158w/base.png',
-  baseImage: '/products/casio-a158w/base.png',
-  overlayImage: '/products/casio-a158w/overlay.png',
+  descriptionI18n: {
+    en: 'The classic steel Casio with a digital display. Customize the dial with your own image.',
+    es: 'El clásico Casio de acero con pantalla digital. Personaliza la esfera con tu propia imagen.',
+    fr: 'La Casio classique en acier à affichage digital. Personnalisez le cadran avec votre propre image.',
+  },
+  thumbnail: '/products/casio-a158w/base.webp',
+  baseImage: '/products/casio-a158w/base.webp',
+  overlayImage: '/products/casio-a158w/overlay.webp',
   canvas: {
     width: 1208,
     height: 2224,
@@ -45,5 +50,10 @@ export const casioA158w: ProductConfig = {
       },
     ],
     notesPlaceholder: 'Hai richieste particolari per la tua personalizzazione? Scrivile qui.',
+    notesPlaceholderI18n: {
+      en: 'Any special requests for your customization? Write them here.',
+      es: '¿Tienes peticiones especiales para tu personalización? Escríbelas aquí.',
+      fr: 'Des demandes particulières pour votre personnalisation ? Écrivez-les ici.',
+    },
   },
 }

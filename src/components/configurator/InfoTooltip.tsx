@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useLanguage } from '../../i18n/LanguageContext'
 
 /**
  * Piccolo pulsante "ⓘ" che mostra una spiegazione al tocco/click — usato
@@ -7,6 +8,7 @@ import { useEffect, useRef, useState } from 'react'
  * hover: su mobile l'hover non esiste, quindi deve funzionare anche al tocco.
  */
 export default function InfoTooltip({ text }: { text: string }) {
+  const { t } = useLanguage()
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -32,7 +34,7 @@ export default function InfoTooltip({ text }: { text: string }) {
     <div ref={containerRef} className="relative inline-flex">
       <button
         type="button"
-        aria-label="Maggiori informazioni"
+        aria-label={t('infoTooltip.aria')}
         aria-expanded={open}
         onClick={(e) => {
           e.preventDefault()

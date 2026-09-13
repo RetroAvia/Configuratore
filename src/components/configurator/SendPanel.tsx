@@ -5,6 +5,7 @@ import { buildInstagramDmHref, buildMailtoHref, RETROAVIA_INSTAGRAM_PROFILE } fr
 import type { OrderSummaryLine } from '../../utils/pricing'
 import { formatPriceDelta, formatTotal } from '../../utils/pricing'
 import { useAnimatedNumber } from '../../hooks/useAnimatedNumber'
+import { useLanguage } from '../../i18n/LanguageContext'
 
 interface SendPanelProps {
   productName: string
@@ -54,6 +55,7 @@ export default function SendPanel({
   onGenerateQuoteCard,
   isGeneratingQuoteCard,
 }: SendPanelProps) {
+  const { t, locale } = useLanguage()
   const [copied, setCopied] = useState(false)
   const mailtoHref = buildMailtoHref(productName, orderSummaryText ?? undefined)
   const instagramHref = buildInstagramDmHref()
@@ -74,18 +76,15 @@ export default function SendPanel({
   return (
     <div className="flex flex-col gap-5 rounded-3xl border border-border bg-surface p-5 shadow-xl sm:p-6">
       <div>
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-muted">Invia la tua idea</h2>
-        <p className="mt-2 text-sm leading-relaxed text-ink-muted">
-          Più che scaricarla, la personalizzazione va fatta vedere a RetroAvia: genera il render — contiene
-          già tutte le immagini del collage, composte insieme — poi invialo via email o Instagram.
-        </p>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-muted">{t('sendPanel.heading')}</h2>
+        <p className="mt-2 text-sm leading-relaxed text-ink-muted">{t('sendPanel.description')}</p>
       </div>
 
       {orderSummaryLines && orderSummaryLines.length > 0 && (
         <div className="rounded-2xl border border-border bg-surface-2 p-4">
           <p className="flex items-center gap-2 text-sm font-medium text-ink">
             <span aria-hidden="true">🧾</span>
-            Riepilogo ordine
+            {t('sendPanel.orderSummaryHeading')}
           </p>
           <ul className="mt-3 flex flex-col gap-1.5">
             {orderSummaryLines.map((line) => (
@@ -93,21 +92,21 @@ export default function SendPanel({
                 <span className="min-w-0 truncate text-ink-muted">{line.groupTitle}</span>
                 <span className="shrink-0 text-right font-medium text-ink">
                   {line.optionLabel}
-                  <span className="ml-1.5 font-mono text-ink-muted">{formatPriceDelta(line.priceDelta)}</span>
+                  <span className="ml-1.5 font-mono text-ink-muted">{formatPriceDelta(line.priceDelta, locale)}</span>
                 </span>
               </li>
             ))}
           </ul>
           {notes.trim() && (
             <p className="mt-3 border-t border-border pt-3 text-xs leading-relaxed text-ink-muted">
-              <span className="font-medium text-ink">Note: </span>
+              <span className="font-medium text-ink">{t('sendPanel.notesPrefix')}</span>
               {notes.trim()}
             </p>
           )}
           {total !== null && (
             <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
-              <span className="text-sm font-bold text-ink">Totale stimato</span>
-              <span className="font-mono text-lg font-extrabold text-accent">{formatTotal(animatedTotal)}</span>
+              <span className="text-sm font-bold text-ink">{t('sendPanel.totalLabel')}</span>
+              <span className="font-mono text-lg font-extrabold text-accent">{formatTotal(animatedTotal, locale)}</span>
             </div>
           )}
         </div>
@@ -115,10 +114,8 @@ export default function SendPanel({
 
       {/* Passaggio 1: genera il render */}
       <div className="rounded-2xl border border-border bg-surface-2 p-4">
-        <p className="text-sm font-medium text-ink">1. Genera il render finale</p>
-        <p className="mt-1 text-xs text-ink-muted">
-          Crea l'immagine ad alta risoluzione (scocca + il tuo collage) e la scarica sul tuo dispositivo.
-        </p>
+        <p className="text-sm font-medium text-ink">{t('sendPanel.step1Heading')}</p>
+        <p className="mt-1 text-xs text-ink-muted">{t('sendPanel.step1Description')}</p>
         <button
           type="button"
           onClick={() => {
@@ -130,28 +127,23 @@ export default function SendPanel({
           style={{ backgroundImage: 'linear-gradient(90deg, #c1272d, #e8b04b)' }}
         >
           {isExporting ? (
-            'Sto preparando il render…'
+            t('sendPanel.generating')
           ) : (
             <>
               <span aria-hidden="true">📨</span>
-              {hasGenerated ? 'Rigenera e riscarica' : 'Genera e scarica il render'}
+              {hasGenerated ? t('sendPanel.regenerate') : t('sendPanel.generateAndDownload')}
             </>
           )}
         </button>
         {hasGenerated && !isExporting && (
-          <p className="animate-gentle-pop mt-2 text-xs font-medium text-success">
-            ✓ Render scaricato. Se sposti o ridimensioni un'immagine del collage, o cambi le opzioni, rigeneralo
-            prima di inviarlo.
-          </p>
+          <p className="animate-gentle-pop mt-2 text-xs font-medium text-success">{t('sendPanel.downloadedConfirm')}</p>
         )}
       </div>
 
       {/* Passaggio 2: invio */}
       <div className="rounded-2xl border border-border bg-surface-2 p-4">
-        <p className="text-sm font-medium text-ink">2. Invia</p>
-        <p className="mt-1 text-xs text-ink-muted">
-          Si apre email o Instagram già pronti: ricordati di allegare il file scaricato al passaggio 1.
-        </p>
+        <p className="text-sm font-medium text-ink">{t('sendPanel.step2Heading')}</p>
+        <p className="mt-1 text-xs text-ink-muted">{t('sendPanel.step2Description')}</p>
 
         <button
           type="button"
@@ -163,7 +155,7 @@ export default function SendPanel({
           className="mt-3 inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-semibold text-ink transition-colors hover:border-primary/60 disabled:pointer-events-none disabled:opacity-40"
         >
           <span aria-hidden="true">⬇️</span>
-          Scarica di nuovo il render
+          {t('sendPanel.downloadAgain')}
         </button>
 
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -174,7 +166,7 @@ export default function SendPanel({
             style={{ backgroundImage: 'linear-gradient(90deg, #c1272d, #e8b04b)' }}
           >
             <span aria-hidden="true">✉️</span>
-            Invia via email
+            {t('sendPanel.sendEmail')}
           </a>
           <a
             href={instagramHref}
@@ -184,7 +176,7 @@ export default function SendPanel({
             className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm font-bold text-ink transition-all hover:border-primary/60 active:scale-[0.98]"
           >
             <InstagramIcon className="h-4 w-4" />
-            Invia su Instagram
+            {t('sendPanel.sendInstagram')}
           </a>
         </div>
 
@@ -192,12 +184,9 @@ export default function SendPanel({
           <div className="mt-3 rounded-xl border border-dashed border-accent/40 bg-accent/5 p-3">
             <p className="flex items-center gap-1.5 text-xs font-semibold text-ink">
               <span aria-hidden="true">🎟️</span>
-              Consigliato per Instagram
+              {t('sendPanel.instagramRecommended')}
             </p>
-            <p className="mt-1 text-xs leading-relaxed text-ink-muted">
-              Genera un'unica immagine con la tua foto e il riepilogo prezzi già dentro: un solo file da allegare,
-              niente testo da copiare a parte.
-            </p>
+            <p className="mt-1 text-xs leading-relaxed text-ink-muted">{t('sendPanel.instagramRecommendedDescription')}</p>
             <button
               type="button"
               onClick={() => {
@@ -208,12 +197,10 @@ export default function SendPanel({
               className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-accent/50 bg-page px-4 py-2.5 text-sm font-bold text-accent transition-colors hover:bg-accent/10 disabled:pointer-events-none disabled:opacity-40"
             >
               <span aria-hidden="true">🖼️</span>
-              {isGeneratingQuoteCard
-                ? 'Sto preparando il biglietto…'
-                : 'Genera biglietto preventivo per Instagram'}
+              {isGeneratingQuoteCard ? t('sendPanel.generatingQuoteCard') : t('sendPanel.generateQuoteCard')}
             </button>
             {!hasGenerated && (
-              <p className="mt-1.5 text-[11px] text-ink-muted">Genera prima il render al passaggio 1 qui sopra.</p>
+              <p className="mt-1.5 text-[11px] text-ink-muted">{t('sendPanel.generateQuoteCardHint')}</p>
             )}
           </div>
         )}
@@ -225,14 +212,14 @@ export default function SendPanel({
             className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border px-4 py-2.5 text-xs font-semibold text-ink-muted transition-colors hover:border-primary/60 hover:text-ink"
           >
             <span aria-hidden="true">{copied ? '✅' : '📋'}</span>
-            {copied ? 'Riepilogo copiato!' : 'Copia il riepilogo (testo semplice)'}
+            {copied ? t('sendPanel.copiedSummary') : t('sendPanel.copySummary')}
           </button>
         )}
 
         <p className="mt-3 text-center text-xs text-ink-muted">
-          Non si apre nulla?{' '}
+          {t('sendPanel.noOpenFooter')}{' '}
           <a href={RETROAVIA_INSTAGRAM_PROFILE} target="_blank" rel="noreferrer" className="underline hover:text-accent">
-            Scrivici dal profilo @retroavia_
+            {t('sendPanel.noOpenFooterLink')}
           </a>
           .
         </p>

@@ -29,8 +29,13 @@ export const gbaSp: ProductConfig = {
   categorySlug: 'console',
   description:
     'La console portatile a conchiglia Nintendo. Personalizza la scocca frontale con una tua immagine.',
-  thumbnail: '/products/gba-sp/base.png',
-  baseImage: '/products/gba-sp/base.png',
+  descriptionI18n: {
+    en: 'The Nintendo clamshell handheld console. Customize the front shell with your own image.',
+    es: 'La consola portátil de concha de Nintendo. Personaliza la carcasa frontal con tu propia imagen.',
+    fr: 'La console portable à clapet de Nintendo. Personnalisez la coque avant avec votre propre image.',
+  },
+  thumbnail: '/products/gba-sp/base.webp',
+  baseImage: '/products/gba-sp/base.webp',
   canvas: {
     width: 1747,
     height: 1762,
@@ -80,5 +85,10 @@ export const gbaSp: ProductConfig = {
     ],
     notesPlaceholder:
       'Vuoi pulsanti di un colore diverso dalla scocca o hai altre richieste particolari? Scrivile qui.',
+    notesPlaceholderI18n: {
+      en: 'Want the buttons in a different color than the shell, or have other special requests? Write them here.',
+      es: '¿Quieres los botones de un color diferente a la carcasa o tienes otras peticiones especiales? Escríbelas aquí.',
+      fr: 'Vous voulez des boutons d’une couleur différente de la coque, ou d’autres demandes particulières ? Écrivez-les ici.',
+    },
   },
 }

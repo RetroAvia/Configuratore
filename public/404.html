@@ -10,9 +10,12 @@
       // "segmentCount" deve corrispondere al numero di segmenti del percorso
       // "base" impostato in vite.config.ts. Per un repository di progetto
       // pubblicato su https://<utente>.github.io/<nome-repo>/ il valore
-      // corretto è 1. Se pubblichi come user/organization page (base = "/"),
-      // imposta segmentCount a 0.
-      var segmentCount = 1
+      // corretto è 1. Se pubblichi come user/organization page, su un
+      // dominio personalizzato o su Vercel (base = "/"), imposta
+      // segmentCount a 0 — il sito attuale è pubblicato su Vercel alla
+      // radice del dominio (configuratore-five.vercel.app), quindi qui
+      // deve restare 0.
+      var segmentCount = 0
       var l = window.location
       l.replace(
         l.protocol +

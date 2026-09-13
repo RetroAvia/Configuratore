@@ -27,8 +27,13 @@ export const gbaAdvance: ProductConfig = {
   categorySlug: 'console',
   description:
     'La storica console portatile Nintendo. Personalizza la scocca con una tua immagine, lasciando invariati schermo e tasti.',
-  thumbnail: '/products/gba-advance/base.png',
-  baseImage: '/products/gba-advance/base.png',
+  descriptionI18n: {
+    en: 'The historic Nintendo handheld console. Customize the shell with your own image, keeping the screen and buttons unchanged.',
+    es: 'La histórica consola portátil de Nintendo. Personaliza la carcasa con tu propia imagen, dejando intactos la pantalla y los botones.',
+    fr: 'La console portable historique de Nintendo. Personnalisez la coque avec votre propre image, en laissant l’écran et les boutons inchangés.',
+  },
+  thumbnail: '/products/gba-advance/base.webp',
+  baseImage: '/products/gba-advance/base.webp',
   canvas: {
     width: 2440,
     height: 1434,
@@ -120,5 +125,10 @@ export const gbaAdvance: ProductConfig = {
     ],
     notesPlaceholder:
       'Vuoi pulsanti di un colore diverso dalla scocca o hai altre richieste particolari? Scrivile qui.',
+    notesPlaceholderI18n: {
+      en: 'Want the buttons in a different color than the shell, or have other special requests? Write them here.',
+      es: '¿Quieres los botones de un color diferente a la carcasa o tienes otras peticiones especiales? Escríbelas aquí.',
+      fr: 'Vous voulez des boutons d’une couleur différente de la coque, ou d’autres demandes particulières ? Écrivez-les ici.',
+    },
   },
 }

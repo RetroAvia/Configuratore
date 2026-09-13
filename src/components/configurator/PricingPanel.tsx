@@ -5,6 +5,7 @@ import type { PricingSelections } from '../../utils/pricing'
 import { computeTotal, formatPriceDelta, formatTotal } from '../../utils/pricing'
 import { playClick } from '../../utils/sound'
 import { useAnimatedNumber } from '../../hooks/useAnimatedNumber'
+import { useLanguage } from '../../i18n/LanguageContext'
 import InfoTooltip from './InfoTooltip'
 
 interface PricingPanelProps {
@@ -70,6 +71,7 @@ export default function PricingPanel({
   draftRestored,
   onDiscardDraft,
 }: PricingPanelProps) {
+  const { t, tr, locale } = useLanguage()
   const total = computeTotal(pricing, selections)
   const animatedTotal = useAnimatedNumber(total)
   // Traccia l'ultima opzione scelta DALL'UTENTE (non quella selezionata di
@@ -80,22 +82,19 @@ export default function PricingPanel({
   return (
     <div id="opzioni-e-prezzo" className="flex flex-col gap-5 rounded-3xl border border-border bg-surface p-5 shadow-xl sm:p-6">
       <div>
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-muted">Opzioni e Prezzo</h2>
-        <p className="mt-2 text-sm leading-relaxed text-ink-muted">
-          Scegli le modifiche che vuoi: il totale si aggiorna subito e verrà incluso nel messaggio che invii a
-          RetroAvia, insieme al render della tua idea.
-        </p>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-muted">{t('pricingPanel.heading')}</h2>
+        <p className="mt-2 text-sm leading-relaxed text-ink-muted">{t('pricingPanel.description')}</p>
         {draftRestored && (
           <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-accent/30 bg-accent/10 px-3 py-2 text-xs text-ink">
             <span aria-hidden="true">↺</span>
-            Abbiamo ripristinato le tue scelte precedenti per questo modello.
+            {t('pricingPanel.draftRestored')}
             {onDiscardDraft && (
               <button
                 type="button"
                 onClick={onDiscardDraft}
                 className="font-semibold text-accent underline underline-offset-2 hover:text-ink"
               >
-                Ricomincia da zero
+                {t('pricingPanel.discardDraft')}
               </button>
             )}
           </p>
@@ -116,11 +115,13 @@ export default function PricingPanel({
               <div className="flex items-center gap-2">
                 <span aria-hidden="true">{group.icon}</span>
                 <h3 className={`text-sm font-semibold ${group.highlighted ? 'text-success' : 'text-ink'}`}>
-                  {group.title}
+                  {tr(group.title, group.titleI18n)}
                 </h3>
-                {group.info && <InfoTooltip text={group.info} />}
+                {group.info && <InfoTooltip text={tr(group.info, group.infoI18n)} />}
               </div>
-              {group.helperText && <p className="mt-1 text-xs leading-relaxed text-ink-muted">{group.helperText}</p>}
+              {group.helperText && (
+                <p className="mt-1 text-xs leading-relaxed text-ink-muted">{tr(group.helperText, group.helperTextI18n)}</p>
+              )}
 
               <div className="mt-3 flex flex-col gap-2">
                 {group.options.map((option) => {
@@ -161,8 +162,10 @@ export default function PricingPanel({
                           <span aria-hidden="true">{option.icon}</span>
                         )}
                         <span className="truncate font-medium">
-                          {option.label}
-                          {option.note && <span className="ml-1 font-normal text-ink-muted">({option.note})</span>}
+                          {tr(option.label, option.labelI18n)}
+                          {option.note && (
+                            <span className="ml-1 font-normal text-ink-muted">({tr(option.note, option.noteI18n)})</span>
+                          )}
                         </span>
                       </span>
                       <span
@@ -170,7 +173,7 @@ export default function PricingPanel({
                           option.priceDelta >= 0 ? 'text-success' : 'text-accent'
                         }`}
                       >
-                        {formatPriceDelta(option.priceDelta)}
+                        {formatPriceDelta(option.priceDelta, locale)}
                       </span>
                     </label>
                   )
@@ -184,13 +187,13 @@ export default function PricingPanel({
       <div className="rounded-2xl border border-border bg-surface-2 p-4">
         <label htmlFor="pricing-notes" className="flex items-center gap-2 text-sm font-semibold text-ink">
           <span aria-hidden="true">📝</span>
-          Note
+          {t('pricingPanel.notesLabel')}
         </label>
         <textarea
           id="pricing-notes"
           value={notes}
           onChange={(e) => onNotesChange(e.target.value)}
-          placeholder={pricing.notesPlaceholder}
+          placeholder={tr(pricing.notesPlaceholder, pricing.notesPlaceholderI18n)}
           rows={3}
           className="mt-2 w-full resize-none rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted focus:outline-none focus-visible:outline-2 focus-visible:outline-accent"
         />
@@ -200,8 +203,8 @@ export default function PricingPanel({
         className="flex items-center justify-between rounded-2xl px-5 py-4 shadow-lg shadow-primary/20"
         style={{ backgroundImage: 'linear-gradient(90deg, #c1272d, #e8b04b)' }}
       >
-        <span className="text-sm font-bold uppercase tracking-wide text-white/90">Totale stimato</span>
-        <span className="font-mono text-2xl font-extrabold text-white">{formatTotal(animatedTotal)}</span>
+        <span className="text-sm font-bold uppercase tracking-wide text-white/90">{t('pricingPanel.totalLabel')}</span>
+        <span className="font-mono text-2xl font-extrabold text-white">{formatTotal(animatedTotal, locale)}</span>
       </div>
     </div>
   )

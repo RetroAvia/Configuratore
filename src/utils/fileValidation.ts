@@ -3,9 +3,12 @@ const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024 // 20 MB
 
 export class ImageLoadError extends Error {
   code: 'unsupported-type' | 'too-large' | 'decode-error'
-  constructor(code: ImageLoadError['code'], message: string) {
+  /** Dati utili per ricostruire il messaggio nella lingua corrente (vedi `i18n/translations.ts`). */
+  meta?: { fileType?: string; sizeMB?: string; maxMB?: string }
+  constructor(code: ImageLoadError['code'], message: string, meta?: ImageLoadError['meta']) {
     super(message)
     this.code = code
+    this.meta = meta
     this.name = 'ImageLoadError'
   }
 }
@@ -20,12 +23,14 @@ export function assertValidImageFile(file: File): void {
     throw new ImageLoadError(
       'unsupported-type',
       `Formato non supportato${file.type ? ` (${file.type})` : ''}. Usa un'immagine JPG, PNG o WEBP.`,
+      { fileType: file.type },
     )
   }
   if (file.size > MAX_FILE_SIZE_BYTES) {
     throw new ImageLoadError(
       'too-large',
       `Il file è troppo grande (${formatMegabytes(file.size)} MB). Il limite è ${formatMegabytes(MAX_FILE_SIZE_BYTES)} MB.`,
+      { sizeMB: formatMegabytes(file.size), maxMB: formatMegabytes(MAX_FILE_SIZE_BYTES) },
     )
   }
 }
