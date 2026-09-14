@@ -49,7 +49,7 @@ export default function LanguageSwitcher() {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-full z-30 mt-2 w-40 overflow-hidden rounded-2xl border border-border bg-page p-1.5 shadow-2xl"
+          className="glass-surface absolute right-0 top-full z-30 mt-2 w-40 overflow-hidden rounded-2xl border border-border/70 p-1.5"
         >
           {SUPPORTED_LOCALES.map((loc) => (
             <button

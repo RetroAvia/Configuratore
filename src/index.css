@@ -222,6 +222,65 @@ input[type='range']::-moz-range-thumb {
   }
 }
 
+/* Comparsa di un toast (notifica flottante): scivola leggermente dall'alto e sfuma in dentro. Fuori da qualunque media query il toast resta comunque visibile (opacity: 1 di base) — l'animazione è solo un arricchimento per chi non ha impostato "riduci animazioni". */
+.animate-toast-in {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+      transform: translateY(-10px) scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+  .animate-toast-in {
+    animation: toast-in 0.35s var(--ease-fluid);
+  }
+}
+
+/*
+ * Grana fotografica sottilissima su tutta l'app: un filtro di rumore
+ * (`feTurbulence` via SVG inline, nessun file immagine da caricare) in
+ * `mix-blend-mode: overlay` a opacità molto bassa. Da solo un fondo scuro
+ * piatto può sembrare "digitale" e un po' generico; questa texture aggiunge
+ * la sensazione materiale/fotografica tipica dei siti più curati, senza
+ * pesare sulle prestazioni (`pointer-events: none`, nessuna interazione).
+ */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.045;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
+
+/*
+ * Superficie "vetro": pensata SOLO per elementi che stanno sopra al resto
+ * del contenuto — header fisso, barra del totale su mobile, tooltip e
+ * piccoli menu a comparsa — non per card o pannelli normali, altrimenti
+ * tutto il sito diventerebbe vetro smerigliato invece di un tocco mirato.
+ * Sfondo semi-trasparente con blur dietro (si vede/si intuisce cosa scorre
+ * sotto) più un sottile filo di luce sul bordo superiore, per dare
+ * l'impressione di una lastra di vetro che cattura la luce — nel tema
+ * scuro del sito, non in versione chiara/bianca come nelle demo Apple.
+ */
+.glass-surface {
+  background-color: color-mix(in srgb, var(--color-surface) 68%, transparent);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  box-shadow:
+    inset 0 1px 0 0 color-mix(in srgb, white 8%, transparent),
+    0 10px 30px -8px color-mix(in srgb, black 65%, transparent);
+}
+
 /*
  * Linea che collega i pallini numerati di "Come funziona": visibile solo a
  * partire dal breakpoint "lg" di Tailwind (64rem), l'unico in cui i 4

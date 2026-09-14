@@ -48,7 +48,7 @@ export default function InfoTooltip({ text }: { text: string }) {
       {open && (
         <div
           role="tooltip"
-          className="absolute left-1/2 top-full z-20 mt-2 w-56 -translate-x-1/2 rounded-xl border border-border bg-page p-3 text-xs leading-relaxed text-ink-muted shadow-2xl"
+          className="glass-surface absolute left-1/2 top-full z-20 mt-2 w-56 -translate-x-1/2 rounded-xl border border-border/70 p-3 text-xs leading-relaxed text-ink-muted"
         >
           {text}
         </div>

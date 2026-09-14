@@ -20,7 +20,7 @@ export default function StickyTotalBar({ total, onJumpToOptions }: StickyTotalBa
 
   return (
     <div
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-border/80 bg-page/95 px-4 backdrop-blur-md lg:hidden"
+      className="glass-surface fixed inset-x-0 bottom-0 z-30 border-t border-border/60 px-4 lg:hidden"
       style={{ paddingTop: '0.75rem', paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
     >
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">

@@ -22,6 +22,8 @@ interface ConfiguratorCanvasProps {
   errorMessage: string | null
   onFileSelected: (file: File) => void
   onRequestUpload: () => void
+  /** Quando true, nasconde temporaneamente il collage e la griglia di editing per mostrare la foto originale del prodotto (confronto prima/dopo). */
+  previewOriginal: boolean
 }
 
 const SNAP_THRESHOLD = 14 // px nativi
@@ -61,6 +63,7 @@ export default function ConfiguratorCanvas({
   errorMessage,
   onFileSelected,
   onRequestUpload,
+  previewOriginal,
 }: ConfiguratorCanvasProps) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [isDraggingFile, setIsDraggingFile] = useState(false)
@@ -291,12 +294,15 @@ export default function ConfiguratorCanvas({
   }
 
   const handleEmptyAreaClick = () => {
+    if (previewOriginal) return
     if (layers.length === 0) {
       onRequestUpload()
     } else {
       onSelectLayer(null)
     }
   }
+
+  const showCollage = layers.length > 0 && !previewOriginal
 
   const gridLines = useMemo(() => {
     if (!showGrid) return null
@@ -363,15 +369,15 @@ export default function ConfiguratorCanvas({
             collage, nell'ordine in cui sono stati aggiunti, oppure l'invito
             al caricamento se non c'è ancora nessuna immagine. */}
         <div
-          className="absolute inset-0 cursor-pointer"
+          className={previewOriginal ? 'absolute inset-0' : 'absolute inset-0 cursor-pointer'}
           style={{
             clipPath: clipPathCss,
-            backgroundColor: layers.length > 0 || isCompoundClip ? undefined : product.emptyAreaColor,
+            backgroundColor: previewOriginal || showCollage || isCompoundClip ? undefined : product.emptyAreaColor,
             fontSize: 'clamp(10px, 2.6cqw, 22px)',
           }}
           onClick={handleEmptyAreaClick}
         >
-          {layers.length > 0 ? (
+          {showCollage ? (
             layers.map((layer) => (
               <img
                 key={layer.id}
@@ -390,7 +396,7 @@ export default function ConfiguratorCanvas({
                 }}
               />
             ))
-          ) : (
+          ) : previewOriginal ? null : (
             <UploadPrompt isDraggingFile={isDraggingFile} errorMessage={errorMessage} compact={isCompoundClip} />
           )}
         </div>
@@ -424,7 +430,8 @@ export default function ConfiguratorCanvas({
           />
         )}
 
-        {/* 5. Overlay di editing: griglia, guide, contorno e maniglie */}
+        {/* 5. Overlay di editing: griglia, guide, contorno e maniglie (nascosto durante il confronto con l'originale) */}
+        {!previewOriginal && (
         <svg
           className="absolute inset-0 h-full w-full"
           viewBox={`0 0 ${nativeW} ${nativeH}`}
@@ -531,10 +538,20 @@ export default function ConfiguratorCanvas({
             </>
           )}
         </svg>
+        )}
 
-        {debugCoordinates && debugPos && (
+        {debugCoordinates && debugPos && !previewOriginal && (
           <div className="pointer-events-none absolute bottom-3 left-3 rounded-lg bg-black/70 px-2 py-1 font-mono text-xs text-accent">
             x: {Math.round(debugPos.x)}, y: {Math.round(debugPos.y)}
+          </div>
+        )}
+
+        {previewOriginal && (
+          <div
+            aria-hidden="true"
+            className="glass-surface pointer-events-none absolute left-3 top-3 rounded-full border border-border/60 px-3 py-1 text-xs font-semibold text-ink"
+          >
+            👁️
           </div>
         )}
       </div>

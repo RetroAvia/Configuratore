@@ -16,17 +16,29 @@ export default function HomePage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
       <div className="relative overflow-hidden">
-        {/* Macchie di colore morbide sullo sfondo dell'hero: solo decorative, ignorate dagli screen reader. */}
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-          <div
-            className="animate-drift-a absolute -left-24 -top-24 h-72 w-72 rounded-full opacity-30 blur-3xl"
-            style={{ backgroundImage: 'linear-gradient(135deg, #c1272d, transparent)' }}
-          />
-          <div
-            className="animate-drift-b absolute -right-16 top-10 h-80 w-80 rounded-full opacity-25 blur-3xl"
-            style={{ backgroundImage: 'linear-gradient(135deg, #e8b04b, transparent)' }}
-          />
-        </div>
+        {/*
+          Alone di colore ambientale dietro al testo dell'hero: solo
+          decorativo, ignorato dagli screen reader. Ogni macchia è un
+          gradiente radiale con dimensione `closest-side`, che per
+          definizione arriva a trasparenza ESATTA (zero, non "quasi zero")
+          esattamente al bordo più vicino di questo riquadro — un fatto
+          matematico del gradiente, non un'approssimazione visiva. Per
+          questo si fonde sempre con lo sfondo della pagina, qualunque sia
+          l'altezza reale dell'hero: il tentativo precedente (cerchi sfocati
+          con `blur` + `overflow-hidden`, poi una maschera) tagliava invece
+          il colore di netto proprio sul bordo, lasciando uno spigolo
+          visibile.
+        */}
+        <div
+          aria-hidden="true"
+          className="animate-drift-a pointer-events-none absolute inset-0 -z-10"
+          style={{ backgroundImage: 'radial-gradient(ellipse closest-side at 20% 20%, rgba(193,39,45,0.32), transparent)' }}
+        />
+        <div
+          aria-hidden="true"
+          className="animate-drift-b pointer-events-none absolute inset-0 -z-10"
+          style={{ backgroundImage: 'radial-gradient(ellipse closest-side at 82% 60%, rgba(232,176,75,0.26), transparent)' }}
+        />
 
         <div className="mx-auto max-w-2xl text-center">
           <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-accent">

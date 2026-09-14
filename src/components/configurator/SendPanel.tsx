@@ -6,6 +6,7 @@ import type { OrderSummaryLine } from '../../utils/pricing'
 import { formatPriceDelta, formatTotal } from '../../utils/pricing'
 import { useAnimatedNumber } from '../../hooks/useAnimatedNumber'
 import { useLanguage } from '../../i18n/LanguageContext'
+import { trackEvent } from '../../utils/analytics'
 
 interface SendPanelProps {
   productName: string
@@ -67,6 +68,7 @@ export default function SendPanel({
     try {
       await navigator.clipboard.writeText(orderSummaryText)
       setCopied(true)
+      trackEvent('summary_copied', { product: productName })
       setTimeout(() => setCopied(false), 2500)
     } catch {
       // La clipboard è solo una comodità: se non è disponibile, l'utente può comunque leggere il riepilogo qui sotto.
@@ -161,7 +163,10 @@ export default function SendPanel({
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <a
             href={mailtoHref}
-            onClick={() => playClick()}
+            onClick={() => {
+              playClick()
+              trackEvent('email_send_clicked', { product: productName })
+            }}
             className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:brightness-110 active:scale-[0.98]"
             style={{ backgroundImage: 'linear-gradient(90deg, #c1272d, #e8b04b)' }}
           >
@@ -172,7 +177,10 @@ export default function SendPanel({
             href={instagramHref}
             target="_blank"
             rel="noreferrer"
-            onClick={() => playClick()}
+            onClick={() => {
+              playClick()
+              trackEvent('instagram_send_clicked', { product: productName })
+            }}
             className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm font-bold text-ink transition-all hover:border-primary/60 active:scale-[0.98]"
           >
             <InstagramIcon className="h-4 w-4" />

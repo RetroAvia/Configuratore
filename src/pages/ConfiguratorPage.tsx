@@ -33,8 +33,11 @@ import {
 import { clearPricingDraft, readPricingDraft, savePricingDraft } from '../utils/pricingStorage'
 import { usePageMeta } from '../hooks/usePageMeta'
 import { useStructuredData } from '../hooks/useStructuredData'
+import { useToasts } from '../hooks/useToasts'
+import ToastStack from '../components/common/ToastStack'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { TranslationKey } from '../i18n/translations'
+import { trackEvent } from '../utils/analytics'
 
 const MAX_LAYERS = 6
 
@@ -117,6 +120,37 @@ export default function ConfiguratorPage() {
   }, [product])
   useStructuredData(structuredData)
 
+  // Dati strutturati Schema.org (BreadcrumbList): Home > Categoria > Prodotto.
+  const breadcrumbData = useMemo(() => {
+    if (!product || !category) return null
+    const categoryName = tr(category.name, category.nameI18n)
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'RetroAvia Lab',
+          item: 'https://configuratore-five.vercel.app/',
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: categoryName,
+          item: `https://configuratore-five.vercel.app/${category.slug}`,
+        },
+        {
+          '@type': 'ListItem',
+          position: 3,
+          name: product.name,
+          item: `https://configuratore-five.vercel.app/${product.categorySlug}/${product.slug}`,
+        },
+      ],
+    }
+  }, [product, category, tr])
+  useStructuredData(breadcrumbData)
+
   const baseImageEl = useHtmlImage(product?.baseImage)
   const overlayImageEl = useHtmlImage(product?.overlayImage)
 
@@ -126,10 +160,17 @@ export default function ConfiguratorPage() {
   const [layers, setLayers] = useState<ImageLayer[]>([])
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  // `errorMessage` alimenta SOLO il messaggio contestuale dentro l'area di
+  // caricamento (quando non c'è ancora nessuna immagine); i toast qui sotto
+  // sono la notifica visibile per tutti gli altri casi (collage già
+  // iniziato, fallimento nella generazione del render/biglietto...), dato
+  // che in quei momenti l'area di caricamento non è più a schermo.
+  const { toasts, pushToast, dismissToast } = useToasts()
   const [isExporting, setIsExporting] = useState(false)
   const [isGeneratingQuoteCard, setIsGeneratingQuoteCard] = useState(false)
   const [showGrid, setShowGrid] = useState(false)
   const [lastExportedBlob, setLastExportedBlob] = useState<Blob | null>(null)
+  const [previewOriginal, setPreviewOriginal] = useState(false)
 
   // Scelte correnti nel pannello "Opzioni e Prezzo" (se il prodotto ne ha
   // uno) e note libere: alimentano sia il totale mostrato a schermo sia il
@@ -152,18 +193,72 @@ export default function ConfiguratorPage() {
     layersRef.current = layers
   }, [layers])
 
+  // --- Cronologia (undo/redo) ---------------------------------------------
+  // Ogni voce di `past`/`future` è uno snapshot COMPLETO dell'array `layers`
+  // a un certo momento. Non registriamo ogni singolo micro-movimento: un
+  // `useEffect` "assesta" la modifica solo dopo 450ms di quiete (nessun
+  // altro cambiamento a `layers`), così un intero trascinamento o pizzico
+  // (fatto di decine di aggiornamenti al secondo) diventa UN solo passo di
+  // annullamento, non decine.
+  const [history, setHistory] = useState<{ past: ImageLayer[][]; future: ImageLayer[][] }>({ past: [], future: [] })
+  const lastCommittedLayersRef = useRef<ImageLayer[]>(layers)
+  const isApplyingHistoryRef = useRef(false)
+
+  useEffect(() => {
+    if (isApplyingHistoryRef.current) {
+      // Questo cambiamento di `layers` è stato generato da handleUndo/handleRedo
+      // stesso: è già storia, non va ri-registrato come nuovo passo.
+      isApplyingHistoryRef.current = false
+      return
+    }
+    const timer = setTimeout(() => {
+      setHistory((h) => {
+        if (lastCommittedLayersRef.current === layers) return h
+        return { past: [...h.past, lastCommittedLayersRef.current].slice(-40), future: [] }
+      })
+      lastCommittedLayersRef.current = layers
+    }, 450)
+    return () => clearTimeout(timer)
+  }, [layers])
+
+  const handleUndo = useCallback(() => {
+    if (history.past.length === 0) return
+    const previous = history.past[history.past.length - 1]
+    isApplyingHistoryRef.current = true
+    lastCommittedLayersRef.current = previous
+    setHistory({ past: history.past.slice(0, -1), future: [layers, ...history.future] })
+    setLayers(previous)
+    setSelectedLayerId((current) => (current && previous.some((l) => l.id === current) ? current : null))
+    setLastExportedBlob(null)
+  }, [history, layers])
+
+  const handleRedo = useCallback(() => {
+    if (history.future.length === 0) return
+    const next = history.future[0]
+    isApplyingHistoryRef.current = true
+    lastCommittedLayersRef.current = next
+    setHistory({ past: [...history.past, layers], future: history.future.slice(1) })
+    setLayers(next)
+    setSelectedLayerId((current) => (current && next.some((l) => l.id === current) ? current : null))
+    setLastExportedBlob(null)
+  }, [history, layers])
+
   // Reimposta lo stato quando l'utente cambia prodotto (es. tramite i link "indietro/avanti" del browser),
   // rilasciando tutti gli URL oggetto degli strati del prodotto precedente e
   // ripartendo dalle opzioni di default del nuovo prodotto — oppure da una
   // bozza salvata in precedenza per QUESTO stesso prodotto, se presente.
   useEffect(() => {
+    const emptyLayers: ImageLayer[] = []
     setLayers((current) => {
       current.forEach((layer) => URL.revokeObjectURL(layer.image.key))
-      return []
+      return emptyLayers
     })
     setSelectedLayerId(null)
     setErrorMessage(null)
     setLastExportedBlob(null)
+    setPreviewOriginal(false)
+    setHistory({ past: [], future: [] })
+    lastCommittedLayersRef.current = emptyLayers
 
     const pricing = product?.pricing
     if (pricing) {
@@ -227,14 +322,16 @@ export default function ConfiguratorPage() {
       const availableSlots = MAX_LAYERS - layers.length
       if (availableSlots <= 0) {
         playError()
-        setErrorMessage(t('configuratorPage.errorMaxLayers', { max: MAX_LAYERS }))
+        const message = t('configuratorPage.errorMaxLayers', { max: MAX_LAYERS })
+        setErrorMessage(message)
+        pushToast(message, 'error')
         return
       }
       const filesToAdd = files.slice(0, availableSlots)
       if (files.length > filesToAdd.length) {
-        setErrorMessage(
-          t('configuratorPage.errorMaxLayersPartial', { max: MAX_LAYERS, added: filesToAdd.length }),
-        )
+        const message = t('configuratorPage.errorMaxLayersPartial', { max: MAX_LAYERS, added: filesToAdd.length })
+        setErrorMessage(message)
+        pushToast(message, 'error')
       } else {
         setErrorMessage(null)
       }
@@ -259,15 +356,13 @@ export default function ConfiguratorPage() {
           })
           .catch((err: unknown) => {
             playError()
-            if (err instanceof ImageLoadError) {
-              setErrorMessage(getImageErrorMessage(err, t))
-            } else {
-              setErrorMessage(t('configuratorPage.errorUnexpectedAdd'))
-            }
+            const message = err instanceof ImageLoadError ? getImageErrorMessage(err, t) : t('configuratorPage.errorUnexpectedAdd')
+            setErrorMessage(message)
+            pushToast(message, 'error')
           })
       })
     },
-    [layers, clipArea, t],
+    [layers, clipArea, t, pushToast],
   )
 
   /** Sostituisce solo la FOTO di uno strato esistente, mantenendone posizione e rotazione. */
@@ -296,13 +391,11 @@ export default function ConfiguratorPage() {
       })
       .catch((err: unknown) => {
         playError()
-        if (err instanceof ImageLoadError) {
-          setErrorMessage(getImageErrorMessage(err, t))
-        } else {
-          setErrorMessage(t('configuratorPage.errorUnexpectedReplace'))
-        }
+        const message = err instanceof ImageLoadError ? getImageErrorMessage(err, t) : t('configuratorPage.errorUnexpectedReplace')
+        setErrorMessage(message)
+        pushToast(message, 'error')
       })
-  }, [t])
+  }, [t, pushToast])
 
   const handleRemoveLayer = useCallback(
     (id: string) => {
@@ -392,13 +485,16 @@ export default function ConfiguratorPage() {
       downloadBlob(blob, product.exportFileName)
       setLastExportedBlob(blob)
       playExportSuccess()
+      trackEvent('render_generated', { product: product.slug, category: product.categorySlug })
     } catch {
       playError()
-      setErrorMessage(t('configuratorPage.errorExport'))
+      const message = t('configuratorPage.errorExport')
+      setErrorMessage(message)
+      pushToast(message, 'error')
     } finally {
       setIsExporting(false)
     }
-  }, [product, baseImageEl, layers, overlayImageEl, t])
+  }, [product, baseImageEl, layers, overlayImageEl, t, pushToast])
 
   const handleDownload = useCallback(() => {
     if (!product || !lastExportedBlob) return
@@ -421,6 +517,148 @@ export default function ConfiguratorPage() {
   const handleJumpToOptions = useCallback(() => {
     document.getElementById('opzioni-e-prezzo')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [])
+
+  /**
+   * Duplica lo strato selezionato. Ridisegna l'immagine su un canvas
+   * offscreen per ottenere un blob/URL NUOVI e indipendenti da quelli
+   * dello strato originale: condividere lo stesso URL fra due strati
+   * romperebbe l'altro nel momento in cui uno dei due viene rimosso o
+   * sostituito (`URL.revokeObjectURL` invaliderebbe anche la copia).
+   */
+  const handleDuplicateLayer = useCallback(() => {
+    if (!selectedLayer || layers.length >= MAX_LAYERS) return
+    const { element, width, height } = selectedLayer.image
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.drawImage(element, 0, 0, width, height)
+    canvas.toBlob((blob) => {
+      if (!blob) return
+      const url = URL.createObjectURL(blob)
+      const clone = new Image()
+      clone.onload = () => {
+        const offset = 28
+        const newLayer: ImageLayer = {
+          id: createLayerId(),
+          image: { key: url, element: clone, width, height },
+          transform: { ...selectedLayer.transform, x: selectedLayer.transform.x + offset, y: selectedLayer.transform.y + offset },
+        }
+        setLayers((current) => [...current, newLayer])
+        setSelectedLayerId(newLayer.id)
+        setLastExportedBlob(null)
+        playUpload()
+      }
+      clone.src = url
+    })
+  }, [selectedLayer, layers.length])
+
+  /**
+   * Sposta uno strato avanti/indietro nell'ordine di sovrapposizione: dato
+   * che l'ordine dell'array `layers` è anche l'ordine di disegno (l'ultimo
+   * è quello visivamente più in alto, vedi `ConfiguratorCanvas`), riordinare
+   * l'array è tutto ciò che serve — sia per l'anteprima sia per il render
+   * finale esportato.
+   */
+  const handleMoveLayer = useCallback((id: string, direction: 'forward' | 'backward') => {
+    setLayers((current) => {
+      const index = current.findIndex((l) => l.id === id)
+      if (index === -1) return current
+      const targetIndex = direction === 'forward' ? index + 1 : index - 1
+      if (targetIndex < 0 || targetIndex >= current.length) return current
+      const next = [...current]
+      ;[next[index], next[targetIndex]] = [next[targetIndex], next[index]]
+      return next
+    })
+    setLastExportedBlob(null)
+    playClick()
+  }, [])
+
+  // --- Scorciatoie da tastiera (solo desktop, con un'immagine selezionata) ---
+  // Frecce per spostare, +/- per ridimensionare, [ e ] per ruotare, Canc per
+  // rimuovere, Esc per deselezionare. Disattivate quando il focus è su un
+  // campo di testo/numero (incluse le slider di Dimensione/Rotazione, che
+  // hanno già il loro comportamento nativo da tastiera).
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null
+      const isEditableTarget =
+        target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target?.isContentEditable
+      if (isEditableTarget) return
+
+      if (e.key === 'Escape') {
+        setSelectedLayerId(null)
+        return
+      }
+
+      const isModifier = e.metaKey || e.ctrlKey
+      if (isModifier && e.key.toLowerCase() === 'z') {
+        e.preventDefault()
+        if (e.shiftKey) {
+          handleRedo()
+        } else {
+          handleUndo()
+        }
+        return
+      }
+      if (isModifier && e.key.toLowerCase() === 'y') {
+        e.preventDefault()
+        handleRedo()
+        return
+      }
+
+      if (!selectedLayerId) return
+
+      const nudge = e.shiftKey ? 20 : 4
+      switch (e.key) {
+        case 'ArrowUp':
+          e.preventDefault()
+          updateLayerTransform(selectedLayerId, (t) => ({ ...t, y: t.y - nudge }))
+          break
+        case 'ArrowDown':
+          e.preventDefault()
+          updateLayerTransform(selectedLayerId, (t) => ({ ...t, y: t.y + nudge }))
+          break
+        case 'ArrowLeft':
+          e.preventDefault()
+          updateLayerTransform(selectedLayerId, (t) => ({ ...t, x: t.x - nudge }))
+          break
+        case 'ArrowRight':
+          e.preventDefault()
+          updateLayerTransform(selectedLayerId, (t) => ({ ...t, x: t.x + nudge }))
+          break
+        case '+':
+        case '=':
+          e.preventDefault()
+          updateLayerTransform(selectedLayerId, (t) => ({ ...t, scale: clampScale(t.scale * 1.05) }))
+          break
+        case '-':
+        case '_':
+          e.preventDefault()
+          updateLayerTransform(selectedLayerId, (t) => ({ ...t, scale: clampScale(t.scale / 1.05) }))
+          break
+        case '[':
+          e.preventDefault()
+          updateLayerTransform(selectedLayerId, (t) => ({ ...t, rotation: normalizeRotation(t.rotation - 5) }))
+          break
+        case ']':
+          e.preventDefault()
+          updateLayerTransform(selectedLayerId, (t) => ({ ...t, rotation: normalizeRotation(t.rotation + 5) }))
+          break
+        case 'Delete':
+        case 'Backspace':
+          e.preventDefault()
+          handleRemoveLayer(selectedLayerId)
+          break
+        default:
+          break
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [selectedLayerId, updateLayerTransform, handleRemoveLayer, handleUndo, handleRedo])
 
   if (!category || !product) {
     return <NotFoundPage />
@@ -451,9 +689,12 @@ export default function ConfiguratorPage() {
       })
       downloadBlob(blob, product.exportFileName.replace(/\.png$/, '-preventivo-instagram.png'))
       playExportSuccess()
+      trackEvent('quote_card_generated', { product: product.slug, category: product.categorySlug })
     } catch {
       playError()
-      setErrorMessage(t('configuratorPage.errorQuoteCard'))
+      const message = t('configuratorPage.errorQuoteCard')
+      setErrorMessage(message)
+      pushToast(message, 'error')
     } finally {
       setIsGeneratingQuoteCard(false)
     }
@@ -461,6 +702,7 @@ export default function ConfiguratorPage() {
 
   return (
     <div className={`mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14 ${pricing ? 'pb-28 lg:pb-14' : ''}`}>
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
       <input
         ref={addFileInputRef}
         type="file"
@@ -523,12 +765,8 @@ export default function ConfiguratorPage() {
             errorMessage={errorMessage}
             onFileSelected={(file) => handleAddImageFiles([file])}
             onRequestUpload={openAddFilePicker}
+            previewOriginal={previewOriginal}
           />
-          {errorMessage && layers.length > 0 && (
-            <p role="alert" className="mt-3 text-sm font-medium text-danger">
-              {errorMessage}
-            </p>
-          )}
         </div>
 
         {/* Colonna di destra dedicata alla gestione dell'immagine/collage: le
@@ -550,8 +788,17 @@ export default function ConfiguratorPage() {
             onReset={handleResetLayer}
             onRequestAddImage={openAddFilePicker}
             onRequestReplaceSelected={openReplacePicker}
+            onDuplicateSelected={handleDuplicateLayer}
+            onMoveLayerForward={() => selectedLayerId && handleMoveLayer(selectedLayerId, 'forward')}
+            onMoveLayerBackward={() => selectedLayerId && handleMoveLayer(selectedLayerId, 'backward')}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
+            canUndo={history.past.length > 0}
+            canRedo={history.future.length > 0}
             showGrid={showGrid}
             onToggleGrid={setShowGrid}
+            previewOriginal={previewOriginal}
+            onTogglePreviewOriginal={() => setPreviewOriginal((current) => !current)}
             maxLayers={MAX_LAYERS}
           />
         </div>

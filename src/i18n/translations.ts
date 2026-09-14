@@ -42,6 +42,7 @@ const it = {
   'gallery.title': 'Qualche personalizzazione consegnata ai clienti',
 
   'categoryCard.explore': 'Esplora',
+  'categoryCard.modelsCount': ((vars: Vars) => (vars.count === 1 ? '1 modello' : `${vars.count} modelli`)) as Value,
 
   'productCard.fromPrice': ((vars: Vars) => `da ${vars.price}`) as Value,
   'productCard.customizeNow': 'Personalizza ora',
@@ -93,6 +94,11 @@ const it = {
   'toolbar.showGrid': 'Mostra griglia',
   'toolbar.instructions':
     "Tocca una miniatura qui sopra per scegliere l'immagine da modificare. Trascina l'immagine selezionata per spostarla, usa le maniglie sugli angoli (o il pizzico a due dita su mobile) per ridimensionarla, e la maniglia in alto per ruotarla. Le linee guida azzurre compaiono automaticamente quando è centrata. Quando sei soddisfatto, genera e invia il render dal pannello qui sotto.",
+  'toolbar.duplicate': 'Duplica',
+  'toolbar.bringForward': 'Porta avanti',
+  'toolbar.sendBackward': 'Porta indietro',
+  'toolbar.keyboardHint':
+    "Con un'immagine selezionata puoi anche usare la tastiera: frecce per spostarla, +/- per ridimensionarla, [ e ] per ruotarla, Canc per rimuoverla.",
 
   'pricingPanel.heading': 'Opzioni e Prezzo',
   'pricingPanel.description':
@@ -150,6 +156,20 @@ const it = {
   'errors.tooLarge': ((vars: Vars) => `Il file è troppo grande (${vars.sizeMB} MB). Il limite è ${vars.maxMB} MB.`) as Value,
   'errors.decodeError':
     "Impossibile leggere questa immagine: il file potrebbe essere danneggiato o non è realmente un'immagine.",
+
+  'toast.dismiss': 'Chiudi',
+
+  'errorBoundary.title': 'Qualcosa è andato storto',
+  'errorBoundary.description':
+    "Si è verificato un errore imprevisto. Prova a ricaricare la pagina: nessuna immagine caricata viene mai inviata altrove, quindi non è successo nulla di irreversibile.",
+  'errorBoundary.reload': 'Ricarica la pagina',
+
+  'layout.skipToContent': 'Vai al contenuto principale',
+
+  'toolbar.undo': 'Annulla',
+  'toolbar.redo': 'Ripeti',
+  'toolbar.compareOriginal': "Confronta con l'originale",
+  'toolbar.compareOriginalActive': 'Torna alla tua versione',
 } satisfies Record<string, Value>
 
 type TranslationKey = keyof typeof it
@@ -186,6 +206,7 @@ const en: Record<TranslationKey, Value> = {
   'gallery.title': 'A few customizations delivered to customers',
 
   'categoryCard.explore': 'Explore',
+  'categoryCard.modelsCount': (vars) => (vars.count === 1 ? '1 model' : `${vars.count} models`),
 
   'productCard.fromPrice': (vars) => `from ${vars.price}`,
   'productCard.customizeNow': 'Customize now',
@@ -233,6 +254,11 @@ const en: Record<TranslationKey, Value> = {
   'toolbar.showGrid': 'Show grid',
   'toolbar.instructions':
     'Tap a thumbnail above to choose which image to edit. Drag the selected image to move it, use the corner handles (or a two-finger pinch on mobile) to resize it, and the top handle to rotate it. Blue guide lines appear automatically when it’s centered. When you’re happy with it, generate and send the render from the panel below.',
+  'toolbar.duplicate': 'Duplicate',
+  'toolbar.bringForward': 'Bring forward',
+  'toolbar.sendBackward': 'Send backward',
+  'toolbar.keyboardHint':
+    'With an image selected you can also use the keyboard: arrow keys to move it, +/- to resize it, [ and ] to rotate it, Delete to remove it.',
 
   'pricingPanel.heading': 'Options & Price',
   'pricingPanel.description':
@@ -289,6 +315,20 @@ const en: Record<TranslationKey, Value> = {
       : 'Unsupported format. Use a JPG, PNG or WEBP image.',
   'errors.tooLarge': (vars) => `The file is too large (${vars.sizeMB} MB). The limit is ${vars.maxMB} MB.`,
   'errors.decodeError': 'Couldn’t read this image: the file may be corrupted or isn’t really an image.',
+
+  'toast.dismiss': 'Close',
+
+  'errorBoundary.title': 'Something went wrong',
+  'errorBoundary.description':
+    'An unexpected error occurred. Try reloading the page: no uploaded image is ever sent anywhere, so nothing irreversible happened.',
+  'errorBoundary.reload': 'Reload the page',
+
+  'layout.skipToContent': 'Skip to main content',
+
+  'toolbar.undo': 'Undo',
+  'toolbar.redo': 'Redo',
+  'toolbar.compareOriginal': 'Compare with the original',
+  'toolbar.compareOriginalActive': 'Back to your version',
 }
 
 const es: Record<TranslationKey, Value> = {
@@ -321,6 +361,7 @@ const es: Record<TranslationKey, Value> = {
   'gallery.title': 'Algunas personalizaciones entregadas a clientes',
 
   'categoryCard.explore': 'Explorar',
+  'categoryCard.modelsCount': (vars) => (vars.count === 1 ? '1 modelo' : `${vars.count} modelos`),
 
   'productCard.fromPrice': (vars) => `desde ${vars.price}`,
   'productCard.customizeNow': 'Personalizar ahora',
@@ -369,6 +410,11 @@ const es: Record<TranslationKey, Value> = {
   'toolbar.showGrid': 'Mostrar cuadrícula',
   'toolbar.instructions':
     'Toca una miniatura de arriba para elegir qué imagen editar. Arrastra la imagen seleccionada para moverla, usa los tiradores de las esquinas (o pellizca con dos dedos en el móvil) para redimensionarla, y el tirador superior para rotarla. Aparecen líneas guía azules automáticamente cuando está centrada. Cuando estés satisfecho, genera y envía el render desde el panel de abajo.',
+  'toolbar.duplicate': 'Duplicar',
+  'toolbar.bringForward': 'Traer al frente',
+  'toolbar.sendBackward': 'Enviar atrás',
+  'toolbar.keyboardHint':
+    'Con una imagen seleccionada también puedes usar el teclado: flechas para moverla, +/- para redimensionarla, [ y ] para rotarla, Supr para eliminarla.',
 
   'pricingPanel.heading': 'Opciones y precio',
   'pricingPanel.description':
@@ -425,6 +471,20 @@ const es: Record<TranslationKey, Value> = {
       : 'Formato no compatible. Usa una imagen JPG, PNG o WEBP.',
   'errors.tooLarge': (vars) => `El archivo es demasiado grande (${vars.sizeMB} MB). El límite es ${vars.maxMB} MB.`,
   'errors.decodeError': 'No se ha podido leer esta imagen: el archivo podría estar dañado o no ser realmente una imagen.',
+
+  'toast.dismiss': 'Cerrar',
+
+  'errorBoundary.title': 'Algo salió mal',
+  'errorBoundary.description':
+    'Se ha producido un error inesperado. Prueba a recargar la página: ninguna imagen cargada se envía nunca a ningún sitio, así que no ha pasado nada irreversible.',
+  'errorBoundary.reload': 'Recargar la página',
+
+  'layout.skipToContent': 'Saltar al contenido principal',
+
+  'toolbar.undo': 'Deshacer',
+  'toolbar.redo': 'Rehacer',
+  'toolbar.compareOriginal': 'Comparar con el original',
+  'toolbar.compareOriginalActive': 'Volver a tu versión',
 }
 
 const fr: Record<TranslationKey, Value> = {
@@ -458,6 +518,7 @@ const fr: Record<TranslationKey, Value> = {
   'gallery.title': 'Quelques personnalisations livrées à des clients',
 
   'categoryCard.explore': 'Explorer',
+  'categoryCard.modelsCount': (vars) => (vars.count === 1 ? '1 modèle' : `${vars.count} modèles`),
 
   'productCard.fromPrice': (vars) => `à partir de ${vars.price}`,
   'productCard.customizeNow': 'Personnaliser maintenant',
@@ -506,6 +567,11 @@ const fr: Record<TranslationKey, Value> = {
   'toolbar.showGrid': 'Afficher la grille',
   'toolbar.instructions':
     'Touchez une miniature ci-dessus pour choisir l’image à modifier. Faites glisser l’image sélectionnée pour la déplacer, utilisez les poignées d’angle (ou le pincement à deux doigts sur mobile) pour la redimensionner, et la poignée du haut pour la faire pivoter. Des lignes de guidage bleues apparaissent automatiquement quand elle est centrée. Une fois satisfait, générez et envoyez le rendu depuis le panneau ci-dessous.',
+  'toolbar.duplicate': 'Dupliquer',
+  'toolbar.bringForward': 'Avancer',
+  'toolbar.sendBackward': 'Reculer',
+  'toolbar.keyboardHint':
+    'Avec une image sélectionnée, vous pouvez aussi utiliser le clavier : les flèches pour la déplacer, +/- pour la redimensionner, [ et ] pour la faire pivoter, Suppr pour la supprimer.',
 
   'pricingPanel.heading': 'Options et prix',
   'pricingPanel.description':
@@ -562,6 +628,20 @@ const fr: Record<TranslationKey, Value> = {
       : 'Format non pris en charge. Utilisez une image JPG, PNG ou WEBP.',
   'errors.tooLarge': (vars) => `Le fichier est trop volumineux (${vars.sizeMB} Mo). La limite est de ${vars.maxMB} Mo.`,
   'errors.decodeError': 'Impossible de lire cette image : le fichier est peut-être corrompu ou n’est pas vraiment une image.',
+
+  'toast.dismiss': 'Fermer',
+
+  'errorBoundary.title': "Une erreur s'est produite",
+  'errorBoundary.description':
+    "Une erreur inattendue s'est produite. Essayez de recharger la page : aucune image importée n'est jamais envoyée où que ce soit, donc rien d'irréversible ne s'est produit.",
+  'errorBoundary.reload': 'Recharger la page',
+
+  'layout.skipToContent': 'Passer au contenu principal',
+
+  'toolbar.undo': 'Annuler',
+  'toolbar.redo': 'Rétablir',
+  'toolbar.compareOriginal': "Comparer avec l'original",
+  'toolbar.compareOriginalActive': 'Revenir à votre version',
 }
 
 const dictionaries: Record<Locale, Record<TranslationKey, Value>> = { it, en, es, fr }

@@ -19,8 +19,17 @@ interface ToolbarProps {
   onReset: () => void
   onRequestAddImage: () => void
   onRequestReplaceSelected: () => void
+  onDuplicateSelected: () => void
+  onMoveLayerForward: () => void
+  onMoveLayerBackward: () => void
+  onUndo: () => void
+  onRedo: () => void
+  canUndo: boolean
+  canRedo: boolean
   showGrid: boolean
   onToggleGrid: (value: boolean) => void
+  previewOriginal: boolean
+  onTogglePreviewOriginal: () => void
   maxLayers: number
 }
 
@@ -58,18 +67,52 @@ export default function Toolbar({
   onReset,
   onRequestAddImage,
   onRequestReplaceSelected,
+  onDuplicateSelected,
+  onMoveLayerForward,
+  onMoveLayerBackward,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
   showGrid,
   onToggleGrid,
+  previewOriginal,
+  onTogglePreviewOriginal,
   maxLayers,
 }: ToolbarProps) {
   const { t } = useLanguage()
   const hasImage = layers.length > 0
   const scalePercent = selectedTransform ? Math.round(selectedTransform.scale * 100) : 100
+  const selectedIndex = layers.findIndex((l) => l.id === selectedLayerId)
+  const isAtFront = selectedIndex === -1 || selectedIndex === layers.length - 1
+  const isAtBack = selectedIndex === -1 || selectedIndex === 0
 
   return (
     <div className="flex flex-col gap-5 rounded-3xl border border-border bg-surface p-5 shadow-xl sm:p-6">
       <div>
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-muted">{t('toolbar.imageHeading')}</h2>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-muted">{t('toolbar.imageHeading')}</h2>
+          {(canUndo || canRedo) && (
+            <div className="flex gap-1.5">
+              <IconButton
+                onClick={onUndo}
+                disabled={!canUndo}
+                aria-label={t('toolbar.undo')}
+                className="px-2.5 py-1.5 text-sm"
+              >
+                <span aria-hidden="true">↶</span>
+              </IconButton>
+              <IconButton
+                onClick={onRedo}
+                disabled={!canRedo}
+                aria-label={t('toolbar.redo')}
+                className="px-2.5 py-1.5 text-sm"
+              >
+                <span aria-hidden="true">↷</span>
+              </IconButton>
+            </div>
+          )}
+        </div>
 
         <div className="mt-3 flex flex-wrap gap-2">
           <IconButton onClick={onRequestAddImage} disabled={layers.length >= maxLayers}>
@@ -135,7 +178,7 @@ export default function Toolbar({
         )}
       </div>
 
-      <div className={selectedTransform ? '' : 'pointer-events-none opacity-40'} aria-disabled={!selectedTransform}>
+      <div className={selectedTransform && !previewOriginal ? '' : 'pointer-events-none opacity-40'} aria-disabled={!selectedTransform || previewOriginal}>
         <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-muted">{t('toolbar.positioningHeading')}</h2>
         {layers.length > 1 && selectedTransform && (
           <p className="mt-1 text-[11px] text-ink-muted">{t('toolbar.positioningHint')}</p>
@@ -195,10 +238,41 @@ export default function Toolbar({
             {t('toolbar.reset')}
           </IconButton>
         </div>
+
+        {/* Duplica e ordine di sovrapposizione: azioni sullo strato
+            selezionato, utili solo quando il collage ha più immagini (per
+            l'ordine) o c'è ancora spazio per aggiungerne (per la duplica). */}
+        <div className="mt-2 flex flex-wrap gap-2">
+          <IconButton onClick={onDuplicateSelected} disabled={!selectedTransform || layers.length >= maxLayers}>
+            <span aria-hidden="true">⧉</span>
+            {t('toolbar.duplicate')}
+          </IconButton>
+          {layers.length > 1 && (
+            <>
+              <IconButton onClick={onMoveLayerBackward} disabled={!selectedTransform || isAtBack}>
+                <span aria-hidden="true">⬇️</span>
+                {t('toolbar.sendBackward')}
+              </IconButton>
+              <IconButton onClick={onMoveLayerForward} disabled={!selectedTransform || isAtFront}>
+                <span aria-hidden="true">⬆️</span>
+                {t('toolbar.bringForward')}
+              </IconButton>
+            </>
+          )}
+        </div>
       </div>
 
       <div>
         <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-muted">{t('toolbar.precisionHeading')}</h2>
+        {hasImage && (
+          <IconButton
+            onClick={onTogglePreviewOriginal}
+            className={`mt-3 w-full py-2 ${previewOriginal ? 'border-accent/60 bg-accent/10 text-accent' : ''}`}
+          >
+            <span aria-hidden="true">{previewOriginal ? '↩️' : '👁️'}</span>
+            {previewOriginal ? t('toolbar.compareOriginalActive') : t('toolbar.compareOriginal')}
+          </IconButton>
+        )}
         <label className="mt-3 flex cursor-pointer items-center justify-between rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm text-ink">
           <span>{t('toolbar.showGrid')}</span>
           <input
@@ -212,6 +286,9 @@ export default function Toolbar({
           />
         </label>
         <p className="mt-2 text-xs leading-relaxed text-ink-muted">{t('toolbar.instructions')}</p>
+        <p className="mt-2 text-xs leading-relaxed text-ink-muted/80">
+          <span aria-hidden="true">⌨️</span> {t('toolbar.keyboardHint')}
+        </p>
       </div>
     </div>
   )
