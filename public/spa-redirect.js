@@ -1,18 +1,11 @@
-// Supporto per URL "puliti" (client-side routing) su hosting statici che
-// non riescono a reindirizzare le rotte dell'app verso index.html (es.
-// GitHub Pages). Su Vercel il routing è gestito direttamente da
-// vercel.json (rewrites) e questo script non fa nulla; resta qui solo per
-// compatibilità con un eventuale deploy su GitHub Pages in futuro.
-// Tecnica: https://github.com/rafgraph/spa-github-pages
-;(function (l) {
-  if (l.search[1] === '/') {
-    var decoded = l.search
-      .slice(1)
-      .split('&')
-      .map(function (s) {
-        return s.replace(/~and~/g, '&')
-      })
-      .join('?')
-    window.history.replaceState(null, null, l.pathname.slice(0, -1) + decoded + l.hash)
-  }
-})(window.location)
+// FILE OBSOLETO — si può eliminare.
+//
+// Conteneva il meccanismo di reindirizzamento necessario per far funzionare
+// gli URL "puliti" su GitHub Pages. Il sito è pubblicato su Vercel, dove il
+// routing è gestito dalla regola di riscrittura in vercel.json: lo script non
+// serve più e non è più incluso in index.html.
+//
+// È stato svuotato invece di essere cancellato perché un browser che avesse
+// ancora in cache la vecchia pagina potrebbe richiederlo: meglio un file
+// vuoto che un errore 404 in console. Passata qualche settimana dalla
+// pubblicazione, si può eliminare insieme a questa riga.

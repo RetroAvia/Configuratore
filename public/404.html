@@ -2,41 +2,54 @@
 <html lang="it">
   <head>
     <meta charset="utf-8" />
-    <title>Reindirizzamento…</title>
-    <script type="text/javascript">
-      // Trucco per URL puliti con client-side routing su GitHub Pages.
-      // Vedi: https://github.com/rafgraph/spa-github-pages
-      //
-      // "segmentCount" deve corrispondere al numero di segmenti del percorso
-      // "base" impostato in vite.config.ts. Per un repository di progetto
-      // pubblicato su https://<utente>.github.io/<nome-repo>/ il valore
-      // corretto è 1. Se pubblichi come user/organization page, su un
-      // dominio personalizzato o su Vercel (base = "/"), imposta
-      // segmentCount a 0 — il sito attuale è pubblicato su Vercel alla
-      // radice del dominio (configuratore-five.vercel.app), quindi qui
-      // deve restare 0.
-      var segmentCount = 0
-      var l = window.location
-      l.replace(
-        l.protocol +
-          '//' +
-          l.hostname +
-          (l.port ? ':' + l.port : '') +
-          l.pathname
-            .split('/')
-            .slice(0, 1 + segmentCount)
-            .join('/') +
-          '/?/' +
-          l.pathname
-            .slice(1)
-            .split('/')
-            .slice(segmentCount)
-            .join('/')
-            .replace(/&/g, '~and~') +
-          (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
-          l.hash
-      )
-    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>Pagina non trovata — RetroAvia Lab</title>
+    <style>
+      :root { color-scheme: dark; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #120e0c;
+        color: #f6efe4;
+        font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+        text-align: center;
+        padding: 24px;
+      }
+      h1 { font-size: 1.5rem; margin: 0 0 8px; }
+      p { color: #b9a996; margin: 0 0 24px; }
+      a {
+        display: inline-block;
+        padding: 12px 24px;
+        border-radius: 12px;
+        background: linear-gradient(90deg, #c1272d, #e8b04b);
+        color: #fff;
+        font-weight: 700;
+        text-decoration: none;
+      }
+    </style>
   </head>
-  <body></body>
+  <body>
+    <!--
+      Pagina mostrata dall'hosting per un indirizzo inesistente.
+
+      In condizioni normali non viene quasi mai raggiunta: su Vercel la regola
+      di riscrittura in vercel.json manda ogni percorso all'applicazione, che
+      gestisce da sé la schermata "pagina non trovata" (tradotta nelle quattro
+      lingue del sito). Questa resta come rete di sicurezza per i casi in cui
+      l'applicazione non venga avviata affatto.
+
+      Sostituisce il vecchio file, che conteneva il meccanismo di
+      reindirizzamento richiesto da GitHub Pages: il sito è pubblicato su
+      Vercel, dove quel meccanismo non serve e rischiava solo di mandare i
+      visitatori su indirizzi storpiati.
+    -->
+    <main>
+      <h1>Pagina non trovata</h1>
+      <p>L’indirizzo che hai aperto non esiste (o non esiste più).</p>
+      <a href="/">Torna alla home</a>
+    </main>
+  </body>
 </html>
