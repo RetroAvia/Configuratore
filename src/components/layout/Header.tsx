@@ -26,9 +26,14 @@ export default function Header() {
           onClick={() => playClick()}
           className="flex items-center gap-2.5 rounded-lg text-lg font-extrabold tracking-tight text-ink transition-opacity hover:opacity-80"
         >
+          {/* Il logo a piena risoluzione (512px, 256 KB) veniva scaricato su
+              ogni pagina per essere mostrato in 36 pixel: questa versione
+              ridotta pesa circa quaranta volte meno. */}
           <img
-            src="/logo.png"
+            src="/logo-128.webp"
             alt="RetroAvia"
+            width={36}
+            height={36}
             className="h-9 w-9 rounded-xl object-cover shadow-[0_0_0_1px_rgba(255,255,255,0.06)]"
           />
           <span>

@@ -21,11 +21,24 @@ let audioCtx: AudioContext | null = null
 let muted = readMutedFromStorage()
 const listeners = new Set<(muted: boolean) => void>()
 
+/**
+ * Stato iniziale dei suoni: SPENTI finché l'utente non li accende.
+ *
+ * È una scelta deliberata e non un dettaglio: un sito che inizia a emettere
+ * suoni al primo tocco è il genere di cosa che fa chiudere la scheda, in
+ * particolare da telefono e in pubblico — cioè esattamente la situazione in
+ * cui la maggior parte dei clienti apre un link arrivato su Instagram. Chi li
+ * vuole li accende dal pulsante 🔊 nell'intestazione, e la scelta viene
+ * ricordata.
+ */
 function readMutedFromStorage(): boolean {
   try {
-    return localStorage.getItem(MUTE_STORAGE_KEY) === '1'
+    const stored = localStorage.getItem(MUTE_STORAGE_KEY)
+    // Solo un "0" esplicito (cioè una scelta consapevole di attivarli)
+    // accende i suoni: se non c'è nulla salvato, restano spenti.
+    return stored !== '0'
   } catch {
-    return false
+    return true
   }
 }
 

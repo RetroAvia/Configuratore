@@ -19,5 +19,8 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  // I file di test restano fuori dalla compilazione di produzione: `npm run
+  // build` non deve dipendere dalle dipendenze di test per funzionare.
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
 }

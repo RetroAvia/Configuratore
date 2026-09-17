@@ -12,9 +12,15 @@ ed è pubblicabile gratuitamente su **GitHub Pages**.
 ## Indice
 
 - [Avvio in locale](#avvio-in-locale)
+- [Configurazione (dominio, contatti, informazioni commerciali)](#configurazione)
 - [Come funziona (architettura)](#come-funziona-architettura)
+- [Come arriva una richiesta a RetroAvia](#come-arriva-una-richiesta-a-retroavia)
+- [Regole di compatibilità tra opzioni](#regole-di-compatibilità-tra-opzioni)
 - [Aggiungere un nuovo prodotto](#aggiungere-un-nuovo-prodotto)
 - [Tipi di area di ritaglio (ClipShape)](#tipi-di-area-di-ritaglio-clipshape)
+- [Immagini: quali servono e di che peso](#immagini-quali-servono-e-di-che-peso)
+- [SEO e anteprime dei link](#seo-e-anteprime-dei-link)
+- [Test automatici](#test-automatici)
 - [Pubblicare su GitHub Pages](#pubblicare-su-github-pages)
 - [Stack tecnico](#stack-tecnico)
 
@@ -35,7 +41,60 @@ Altri comandi utili:
 npm run build    # build di produzione nella cartella dist/
 npm run preview  # anteprima locale della build di produzione
 npm run lint     # controlli di qualità del codice (ESLint)
+npm test         # test automatici (motore prezzi, aree di ritaglio, link di configurazione)
 ```
+
+## Configurazione
+
+Tutto ciò che è specifico dell'attività (dominio pubblico, contatti, numero
+WhatsApp, informazioni commerciali) vive in un solo file: **`src/config/site.ts`**.
+
+| Cosa | Dove | Note |
+| --- | --- | --- |
+| Dominio pubblico | variabile d'ambiente `VITE_SITE_URL`, altrimenti il valore di default in `site.ts` | Su Vercel: *Settings → Environment Variables*. Aggiorna meta tag, sitemap, `robots.txt`, dati strutturati e link di configurazione in un colpo solo. |
+| Email e Instagram | `RETROAVIA_EMAIL`, `RETROAVIA_INSTAGRAM_HANDLE` | |
+| Numero WhatsApp | `RETROAVIA_WHATSAPP` | Formato internazionale senza `+` (es. `393331234567`). **Se lasciato vuoto il pulsante WhatsApp non compare**: nessun link rotto. WhatsApp è l'unico canale che permette di precompilare davvero il testo del messaggio, quindi vale la pena valorizzarlo. |
+| Tempi, spedizione, pagamento | `BUSINESS_INFO` | Ogni voce vuota viene omessa; se sono tutte vuote il riquadro non compare. Compila solo quelle di cui conosci la risposta. |
+
+## Come arriva una richiesta a RetroAvia
+
+Il sito non ha un backend: la richiesta viaggia sempre attraverso un canale
+scelto dal cliente. Il pannello di invio li propone in ordine di attrito
+crescente:
+
+1. **Condivisione nativa** (telefono): render e riepilogo passano direttamente
+   all'app scelta dal cliente. Nessun download, nessun allegato da ritrovare.
+2. **WhatsApp** (se configurato): testo del messaggio già scritto.
+3. **Email**: testo precompilato, allegato da aggiungere a mano.
+4. **Instagram**: non permette di precompilare nulla, quindi si offre il
+   *biglietto preventivo* — una sola immagine con render, riepilogo e totale.
+
+In tutti i casi il messaggio contiene due cose che rendono la richiesta
+ricostruibile senza chiedere di nuovo tutto al cliente:
+
+- il **codice richiesta** (es. `RA-7F3KQ`), stampato anche sul biglietto
+  preventivo: serve a ritrovare la conversazione mesi dopo;
+- il **link di configurazione** (`…/console/gba-sp?c=…`), che riapre il
+  configuratore esattamente su quelle scelte. Puoi aprirlo, correggerlo e
+  rimandarlo indietro al cliente: il link si aggiorna da sé.
+
+L'immagine caricata dal cliente **non viaggia mai nel link** (sarebbe enorme e
+violerebbe la promessa "nessun upload" del sito): il link porta solo le scelte,
+la foto continua ad arrivare come render allegato.
+
+## Regole di compatibilità tra opzioni
+
+Alcune lavorazioni non hanno senso insieme: un display IPS o un kit LED
+richiedono di aprire la console, quindi sono impossibili con "Solo Game Boy
+(senza modifiche)". Il vincolo è dichiarato **in un solo punto**, la costante
+`RICHIEDE_SCOCCA_NUOVA` in `src/data/pricing/consoleOptions.ts`, e applicato
+mettendo `requires: [RICHIEDE_SCOCCA_NUOVA]` sulla singola opzione o
+sull'intero gruppo.
+
+Il resto è automatico: l'opzione viene mostrata disattivata con la spiegazione
+del perché, la selezione ricade sulla prima voce disponibile e il totale non
+conta mai una voce impossibile (`utils/pricing.ts`). Per aggiungere una regola
+nuova basta una riga nel file dei dati — nessuna modifica all'interfaccia.
 
 ## Come funziona (architettura)
 
@@ -158,6 +217,55 @@ foto personalizzata, invece di sparire dietro di essa.
 > Per trovare le coordinate pixel esatte da usare in `clipArea` (contorni,
 > fori, centri) su una nuova immagine, usa la modalità di debug descritta
 > sopra in ["Trovare le coordinate dell'area di ritaglio"](#trovare-le-coordinate-dellarea-di-ritaglio).
+
+## Immagini: quali servono e di che peso
+
+Per ogni prodotto, in `public/products/<slug>/`:
+
+| File | A cosa serve | Indicazioni |
+| --- | --- | --- |
+| `base.webp` | Sfondo del configuratore, export e anteprima social | Risoluzione nativa, **deve** corrispondere a `canvas.width × canvas.height` |
+| `thumb.webp` | Card della pagina di categoria | ~480 px di lato lungo. Puntare `thumbnail` su `base.webp` funziona, ma fa scaricare centinaia di kilobyte per mostrare un francobollo |
+| `overlay.webp` | Solo orologi: cifre e icone del display, con trasparenza | Stessa dimensione di `base.webp` |
+
+Per generare una miniatura da un'immagine esistente va bene qualunque editor;
+l'importante è il formato WebP e il lato lungo intorno ai 480 px.
+
+## SEO e anteprime dei link
+
+Il sito è un'applicazione a pagina singola, e i bot che generano l'anteprima
+dei link (Instagram, WhatsApp, Telegram, Facebook) **non eseguono JavaScript**.
+Per questo, al termine di ogni build, il plugin `seoStaticPages` in
+`vite.config.ts` genera:
+
+- una pagina HTML statica per ogni rotta, con titolo, descrizione, immagine e
+  indirizzo canonico del prodotto già scritti dentro;
+- la `sitemap.xml`, ricavata dagli stessi dati dei prodotti (aggiungendo un
+  modello non c'è più un secondo file da aggiornare a mano);
+- l'indirizzo della sitemap dentro `robots.txt`.
+
+Non serve fare nulla: succede da sé a ogni `npm run build`. Se qualcosa va
+storto il plugin stampa un avviso e la build prosegue comunque.
+
+**Cosa manca ancora**: le quattro lingue condividono lo stesso indirizzo, quindi
+Google indicizza solo la versione italiana. Per farle indicizzare tutte
+servirebbero rotte per lingua (`/en/orologi/...`) più i tag `hreflang`.
+
+## Test automatici
+
+```bash
+npm test
+```
+
+Coprono le parti in cui un errore costa davvero: il **motore prezzi** (totali,
+sconti, regole di compatibilità, prezzo "a partire da"), le **aree di ritaglio**
+(inclusa una verifica che i dati di ogni prodotto siano coerenti con il proprio
+canvas) e i **link di configurazione** (codifica, decodifica, link manomessi,
+codice richiesta). Girano sui dati reali dei prodotti, quindi intercettano anche
+le incoerenze introdotte in `src/data/`.
+
+Gli stessi controlli, più lint e build, girano in automatico a ogni push grazie
+a `.github/workflows/ci.yml`.
 
 ## Pubblicare su GitHub Pages
 

@@ -76,11 +76,18 @@ export function simpleClipAreaToCssClipPath(
       const left = pctX(clip.x)
       const right = pctX(canvasSize.width - (clip.x + clip.width))
       const bottom = pctY(canvasSize.height - (clip.y + clip.height))
-      // Il raggio degli angoli viene espresso come percentuale della
-      // larghezza: per raggi piccoli rispetto alle dimensioni del prodotto
-      // (il caso comune) la differenza rispetto a un cerchio perfetto è
-      // trascurabile anche se il canvas non è quadrato.
-      const round = clip.radius ? ` round ${pctX(clip.radius)}` : ''
+      // Il raggio va espresso in percentuale (per restare responsive), ma una
+      // percentuale sola nel border-radius viene risolta sulla LARGHEZZA in
+      // orizzontale e sull'ALTEZZA in verticale: su un prodotto molto più alto
+      // che largo (il Casio F-91W è 1114×2021) questo produceva angoli
+      // ellittici in anteprima, diversi da quelli perfettamente circolari
+      // disegnati nell'export su canvas (`roundRect`).
+      //
+      // La sintassi con la barra — `round <orizzontali> / <verticali>` —
+      // permette di dare i due valori separatamente, così entrambi
+      // corrispondono agli stessi pixel reali e anteprima ed esportazione
+      // tornano a coincidere esattamente.
+      const round = clip.radius ? ` round ${pctX(clip.radius)} / ${pctY(clip.radius)}` : ''
       return `inset(${top} ${right} ${bottom} ${left}${round})`
     }
     case 'ellipse':

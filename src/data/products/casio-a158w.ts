@@ -18,7 +18,7 @@ export const casioA158w: ProductConfig = {
     es: 'El clásico Casio de acero con pantalla digital. Personaliza la esfera con tu propia imagen.',
     fr: 'La Casio classique en acier à affichage digital. Personnalisez le cadran avec votre propre image.',
   },
-  thumbnail: '/products/casio-a158w/base.webp',
+  thumbnail: '/products/casio-a158w/thumb.webp',
   baseImage: '/products/casio-a158w/base.webp',
   overlayImage: '/products/casio-a158w/overlay.webp',
   canvas: {

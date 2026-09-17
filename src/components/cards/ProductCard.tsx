@@ -17,11 +17,18 @@ export default function ProductCard({ product }: ProductCardProps) {
       className="group flex flex-col overflow-hidden rounded-3xl border border-border bg-surface shadow-xl transition-all duration-500 ease-fluid hover:-translate-y-1.5 hover:border-primary/60 hover:shadow-2xl hover:shadow-primary/10"
     >
       <div className="relative flex aspect-[4/5] items-center justify-center overflow-hidden bg-surface-2 p-6">
+        {/* `width`/`height` non impostano la dimensione (ci pensano le classi):
+            comunicano al browser le PROPORZIONI, così lo spazio viene riservato
+            prima che l'immagine arrivi e la pagina non "salta" durante il
+            caricamento — cosa che Google misura e penalizza. */}
         <img
           src={product.thumbnail}
           alt={product.name}
+          width={480}
+          height={600}
           className="h-full w-full object-contain transition-transform duration-500 ease-fluid group-hover:scale-110"
           loading="lazy"
+          decoding="async"
         />
         {startingPrice !== null && (
           <span className="absolute right-3 top-3 rounded-full border border-border bg-page/80 px-3 py-1 text-xs font-bold text-accent shadow-lg backdrop-blur-sm">

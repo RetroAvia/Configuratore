@@ -28,9 +28,18 @@ import {
   formatOrderSummaryText,
   formatTotal,
   getDefaultSelections,
+  getMaxPrice,
   getStartingPrice,
+  resolveSelections,
+  sanitizeSelections,
 } from '../utils/pricing'
 import { clearPricingDraft, readPricingDraft, savePricingDraft } from '../utils/pricingStorage'
+import type { ContactInfo } from '../types/order'
+import { EMPTY_CONTACT } from '../types/order'
+import { buildConfigUrl, CONFIG_PARAM, decodeConfig, makeOrderCode } from '../utils/shareConfig'
+import type { SharedConfig } from '../utils/shareConfig'
+import { canShareImage, shareImage } from '../utils/share'
+import { absoluteUrl, SITE_NAME } from '../config/site'
 import { usePageMeta } from '../hooks/usePageMeta'
 import { useStructuredData } from '../hooks/useStructuredData'
 import { useToasts } from '../hooks/useToasts'
@@ -71,7 +80,7 @@ function getImageErrorMessage(
 
 export default function ConfiguratorPage() {
   const { categorySlug = '', modelSlug = '' } = useParams()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const debugCoordinates = searchParams.get('debug') === '1'
 
   const category = getCategory(categorySlug)
@@ -79,7 +88,7 @@ export default function ConfiguratorPage() {
   const { t, tr, locale } = useLanguage()
 
   usePageMeta({
-    title: product ? `${product.name} — RetroAvia Lab` : t('configuratorPage.notFoundMetaTitle'),
+    title: product ? `${product.name} — ${SITE_NAME}` : t('configuratorPage.notFoundMetaTitle'),
     description: product
       ? t('configuratorPage.metaDescription', {
           productName: product.name,
@@ -89,10 +98,22 @@ export default function ConfiguratorPage() {
           description: tr(product.description, product.descriptionI18n),
         })
       : undefined,
+    // Il percorso canonico NON include la query string: un link di
+    // configurazione condiviso (`?c=…`) punta allo stesso prodotto, e senza
+    // questa dichiarazione ogni link condiviso risulterebbe a Google una
+    // pagina diversa con lo stesso contenuto.
+    path: product ? `/${product.categorySlug}/${product.slug}` : undefined,
+    noindex: !product,
   })
 
-  // Dati strutturati Schema.org (Product + prezzo di partenza), per aiutare
+  // Dati strutturati Schema.org (Product + intervallo di prezzo), per aiutare
   // Google a capire di cosa parla la pagina.
+  //
+  // Si dichiara un `AggregateOffer` con prezzo minimo E massimo invece di un
+  // singolo `Offer` al prezzo di partenza: un preventivo reale quasi mai
+  // costa quanto il minimo, e mostrare nei risultati di ricerca un prezzo che
+  // poi il cliente non ritrova è un'informazione fuorviante (oltre che un
+  // motivo di rimbalzo immediato dalla pagina).
   const structuredData = useMemo(() => {
     if (!product) return null
     return {
@@ -100,19 +121,22 @@ export default function ConfiguratorPage() {
       '@type': 'Product',
       name: product.name,
       description: product.description,
-      image: `https://configuratore-five.vercel.app${product.thumbnail}`,
+      // Immagine ad alta risoluzione: la miniatura serve alle card, non a Google.
+      image: absoluteUrl(product.baseImage),
       brand: {
         '@type': 'Brand',
-        name: 'RetroAvia Lab',
+        name: SITE_NAME,
       },
       ...(product.pricing
         ? {
             offers: {
-              '@type': 'Offer',
+              '@type': 'AggregateOffer',
               priceCurrency: 'EUR',
-              price: getStartingPrice(product.pricing).toFixed(2),
+              lowPrice: getStartingPrice(product.pricing).toFixed(2),
+              highPrice: getMaxPrice(product.pricing).toFixed(2),
+              offerCount: product.pricing.groups.reduce((count, group) => count + group.options.length, 0),
               availability: 'https://schema.org/InStock',
-              url: `https://configuratore-five.vercel.app/${product.categorySlug}/${product.slug}`,
+              url: absoluteUrl(`/${product.categorySlug}/${product.slug}`),
             },
           }
         : {}),
@@ -131,20 +155,20 @@ export default function ConfiguratorPage() {
         {
           '@type': 'ListItem',
           position: 1,
-          name: 'RetroAvia Lab',
-          item: 'https://configuratore-five.vercel.app/',
+          name: SITE_NAME,
+          item: absoluteUrl('/'),
         },
         {
           '@type': 'ListItem',
           position: 2,
           name: categoryName,
-          item: `https://configuratore-five.vercel.app/${category.slug}`,
+          item: absoluteUrl(`/${category.slug}`),
         },
         {
           '@type': 'ListItem',
           position: 3,
           name: product.name,
-          item: `https://configuratore-five.vercel.app/${product.categorySlug}/${product.slug}`,
+          item: absoluteUrl(`/${product.categorySlug}/${product.slug}`),
         },
       ],
     }
@@ -181,6 +205,18 @@ export default function ConfiguratorPage() {
   const [pricingSelections, setPricingSelections] = useState<PricingSelections>({})
   const [notes, setNotes] = useState('')
   const [draftRestored, setDraftRestored] = useState(false)
+  /** True quando le scelte correnti arrivano da un link di configurazione condiviso (`?c=…`) e non da una bozza locale. */
+  const [fromSharedLink, setFromSharedLink] = useState(false)
+
+  // Contatti facoltativi e dichiarazione sui diritti dell'immagine: vivono
+  // qui perché confluiscono sia nel testo inviato a RetroAvia sia nel link di
+  // configurazione condivisibile.
+  const [contact, setContact] = useState<ContactInfo>(EMPTY_CONTACT)
+  const [rightsAccepted, setRightsAccepted] = useState(false)
+  const [isSharing, setIsSharing] = useState(false)
+  // `canShareImage()` interroga il browser una volta sola: il risultato non
+  // cambia durante la visita e la verifica costruisce un file di prova.
+  const [canShareRender] = useState(() => canShareImage())
 
   const addFileInputRef = useRef<HTMLInputElement>(null)
   const replaceFileInputRef = useRef<HTMLInputElement>(null)
@@ -192,6 +228,22 @@ export default function ConfiguratorPage() {
   useEffect(() => {
     layersRef.current = layers
   }, [layers])
+
+  /**
+   * Numero di strati già "prenotati", compresi quelli il cui file è ancora in
+   * fase di decodifica.
+   *
+   * Serve perché il caricamento è asincrono: contando soltanto `layers.length`
+   * — che si aggiorna solo a decodifica finita — due caricamenti ravvicinati
+   * (o un trascinamento durante un caricamento in corso) vedevano entrambi lo
+   * stesso numero di posti liberi e riuscivano a superare il limite massimo.
+   * Questo contatore viene incrementato al momento della richiesta e corretto
+   * se il file poi si rivela non valido.
+   */
+  const layerCountRef = useRef(0)
+
+  /** Cambia a ogni cambio di prodotto: i caricamenti iniziati prima vengono riconosciuti come "vecchi" e scartati. */
+  const loadGenerationRef = useRef(0)
 
   // --- Cronologia (undo/redo) ---------------------------------------------
   // Ogni voce di `past`/`future` è uno snapshot COMPLETO dell'array `layers`
@@ -226,6 +278,7 @@ export default function ConfiguratorPage() {
     const previous = history.past[history.past.length - 1]
     isApplyingHistoryRef.current = true
     lastCommittedLayersRef.current = previous
+    layerCountRef.current = previous.length
     setHistory({ past: history.past.slice(0, -1), future: [layers, ...history.future] })
     setLayers(previous)
     setSelectedLayerId((current) => (current && previous.some((l) => l.id === current) ? current : null))
@@ -237,6 +290,7 @@ export default function ConfiguratorPage() {
     const next = history.future[0]
     isApplyingHistoryRef.current = true
     lastCommittedLayersRef.current = next
+    layerCountRef.current = next.length
     setHistory({ past: [...history.past, layers], future: history.future.slice(1) })
     setLayers(next)
     setSelectedLayerId((current) => (current && next.some((l) => l.id === current) ? current : null))
@@ -248,44 +302,96 @@ export default function ConfiguratorPage() {
   // ripartendo dalle opzioni di default del nuovo prodotto — oppure da una
   // bozza salvata in precedenza per QUESTO stesso prodotto, se presente.
   useEffect(() => {
+    // La revoca degli URL oggetto avviene QUI, non dentro l'aggiornamento di
+    // stato: gli updater passati a `setState` devono essere funzioni pure.
+    // React li esegue due volte in sviluppo (StrictMode) proprio per far
+    // emergere effetti collaterali come questo, che portava a revocare due
+    // volte gli stessi URL.
+    layersRef.current.forEach((layer) => URL.revokeObjectURL(layer.image.key))
+
     const emptyLayers: ImageLayer[] = []
-    setLayers((current) => {
-      current.forEach((layer) => URL.revokeObjectURL(layer.image.key))
-      return emptyLayers
-    })
+    setLayers(emptyLayers)
+    layersRef.current = emptyLayers
+    layerCountRef.current = 0
+    loadGenerationRef.current += 1
     setSelectedLayerId(null)
     setErrorMessage(null)
     setLastExportedBlob(null)
     setPreviewOriginal(false)
+    setRightsAccepted(false)
     setHistory({ past: [], future: [] })
     lastCommittedLayersRef.current = emptyLayers
 
     const pricing = product?.pricing
-    if (pricing) {
-      const draft = readPricingDraft(categorySlug, modelSlug)
-      if (draft) {
-        // Tiene solo le chiavi che esistono ancora nella configurazione
-        // attuale (nel caso i gruppi di opzioni fossero cambiati nel
-        // frattempo), così una bozza vecchia non manda mai in uno stato
-        // incoerente.
-        const validSelections: PricingSelections = {}
-        pricing.groups.forEach((g) => {
-          const saved = draft.selections[g.id]
-          validSelections[g.id] = g.options.some((o) => o.id === saved) ? saved : g.options[0].id
-        })
-        setPricingSelections(validSelections)
-        setNotes(draft.notes)
-        setDraftRestored(true)
-      } else {
-        setPricingSelections(getDefaultSelections(pricing))
-        setNotes('')
-        setDraftRestored(false)
-      }
-    } else {
+    if (!pricing) {
       setPricingSelections({})
       setNotes('')
+      setContact(EMPTY_CONTACT)
       setDraftRestored(false)
+      setFromSharedLink(false)
+      return
     }
+
+    // Ordine di precedenza nel ripristino delle scelte:
+    //
+    //  1. LINK CONDIVISO (`?c=…`): è una richiesta esplicita di vedere una
+    //     configurazione precisa — quella che un cliente ha mandato, o che
+    //     RetroAvia ha rimandato indietro corretta. Vince su tutto.
+    //  2. BOZZA LOCALE: le scelte fatte in una visita precedente su questo
+    //     stesso dispositivo.
+    //  3. VALORI DI DEFAULT.
+    //
+    // In tutti i casi le selezioni passano da `sanitizeSelections`, che
+    // scarta gruppi e opzioni non più esistenti e risolve le combinazioni
+    // diventate impossibili: né una bozza di mesi fa né un link manomesso
+    // possono quindi portare il configuratore in uno stato incoerente.
+    const shared = decodeConfig(searchParams.get(CONFIG_PARAM))
+    const sharedMatchesProduct =
+      shared !== null && shared.categorySlug === categorySlug && shared.modelSlug === modelSlug
+
+    if (sharedMatchesProduct && shared) {
+      setPricingSelections(sanitizeSelections(pricing, shared.selections))
+      setNotes(shared.notes)
+      setContact(shared.contact ?? EMPTY_CONTACT)
+      setDraftRestored(false)
+      setFromSharedLink(true)
+      trackEvent('config_link_opened', { product: modelSlug, category: categorySlug })
+
+      // Il parametro viene tolto dall'indirizzo una volta applicato (senza
+      // aggiungere un passo alla cronologia, così il tasto "indietro"
+      // continua a funzionare come ci si aspetta).
+      //
+      // Senza questo, ricaricando la pagina dopo aver modificato qualcosa si
+      // tornerebbe alla configurazione del link perdendo le proprie modifiche:
+      // il link ha già fatto il suo lavoro, da qui in poi valgono le scelte
+      // dell'utente (salvate in automatico in locale). Per ricondividerla c'è
+      // il pulsante "Copia link configurazione", che la ricostruisce sempre
+      // aggiornata.
+      const remainingParams = new URLSearchParams(searchParams)
+      remainingParams.delete(CONFIG_PARAM)
+      setSearchParams(remainingParams, { replace: true })
+      return
+    }
+
+    const draft = readPricingDraft(categorySlug, modelSlug)
+    if (draft) {
+      setPricingSelections(sanitizeSelections(pricing, draft.selections))
+      setNotes(draft.notes)
+      setContact(draft.contact)
+      setDraftRestored(true)
+      setFromSharedLink(false)
+      return
+    }
+
+    setPricingSelections(getDefaultSelections(pricing))
+    setNotes('')
+    setContact(EMPTY_CONTACT)
+    setDraftRestored(false)
+    setFromSharedLink(false)
+    // `searchParams` è volutamente escluso: il ripristino da link deve
+    // avvenire una sola volta all'apertura del prodotto, non ogni volta che
+    // cambia la query string (altrimenti riscriverebbe le scelte mentre
+    // l'utente le sta modificando).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categorySlug, modelSlug])
 
@@ -301,10 +407,10 @@ export default function ConfiguratorPage() {
   useEffect(() => {
     if (!product?.pricing) return
     const timeout = setTimeout(() => {
-      savePricingDraft(categorySlug, modelSlug, pricingSelections, notes)
+      savePricingDraft(categorySlug, modelSlug, pricingSelections, notes, contact)
     }, 400)
     return () => clearTimeout(timeout)
-  }, [product?.pricing, categorySlug, modelSlug, pricingSelections, notes])
+  }, [product?.pricing, categorySlug, modelSlug, pricingSelections, notes, contact])
 
   const clipArea = product?.clipArea ?? { type: 'rect' as const, x: 0, y: 0, width: 1, height: 1 }
 
@@ -319,7 +425,10 @@ export default function ConfiguratorPage() {
    */
   const handleAddImageFiles = useCallback(
     (files: File[]) => {
-      const availableSlots = MAX_LAYERS - layers.length
+      // Il conteggio parte dal contatore delle "prenotazioni" (vedi
+      // `layerCountRef`) e non da `layers.length`, che durante una decodifica
+      // in corso è ancora indietro.
+      const availableSlots = MAX_LAYERS - layerCountRef.current
       if (availableSlots <= 0) {
         playError()
         const message = t('configuratorPage.errorMaxLayers', { max: MAX_LAYERS })
@@ -336,10 +445,20 @@ export default function ConfiguratorPage() {
         setErrorMessage(null)
       }
 
+      // "Generazione" corrente: se l'utente cambia prodotto mentre un file si
+      // sta ancora decodificando, il risultato che arriva dopo appartiene a un
+      // prodotto che non è più a schermo e va scartato (liberandone l'URL
+      // oggetto) invece di finire nel collage sbagliato.
+      const generation = loadGenerationRef.current
+
       filesToAdd.forEach((file, offset) => {
-        const startIndex = layers.length + offset
+        const startIndex = layerCountRef.current + offset
         loadImageFromFile(file)
           .then(({ element, url, width, height }) => {
+            if (loadGenerationRef.current !== generation) {
+              URL.revokeObjectURL(url)
+              return
+            }
             const transform =
               startIndex === 0
                 ? computeCoverTransform(clipArea, width, height)
@@ -355,25 +474,43 @@ export default function ConfiguratorPage() {
             playUpload()
           })
           .catch((err: unknown) => {
+            if (loadGenerationRef.current !== generation) return
+            // Il posto prenotato viene restituito: un file non valido non
+            // deve consumare uno degli slot disponibili.
+            layerCountRef.current = Math.max(0, layerCountRef.current - 1)
             playError()
             const message = err instanceof ImageLoadError ? getImageErrorMessage(err, t) : t('configuratorPage.errorUnexpectedAdd')
             setErrorMessage(message)
             pushToast(message, 'error')
           })
       })
+
+      layerCountRef.current += filesToAdd.length
     },
-    [layers, clipArea, t, pushToast],
+    [clipArea, t, pushToast],
   )
 
   /** Sostituisce solo la FOTO di uno strato esistente, mantenendone posizione e rotazione. */
   const handleReplaceLayerFile = useCallback((id: string, file: File) => {
+    const generation = loadGenerationRef.current
     loadImageFromFile(file)
       .then(({ element, url, width, height }) => {
+        if (loadGenerationRef.current !== generation) {
+          URL.revokeObjectURL(url)
+          return
+        }
         setErrorMessage(null)
+
+        // L'URL oggetto della foto sostituita viene liberato QUI, fuori
+        // dall'aggiornamento di stato: gli updater devono restare puri (React
+        // li esegue due volte in sviluppo, e il vecchio codice finiva così per
+        // revocare due volte lo stesso URL).
+        const replaced = layersRef.current.find((layer) => layer.id === id)
+        if (replaced) URL.revokeObjectURL(replaced.image.key)
+
         setLayers((current) =>
           current.map((layer) => {
             if (layer.id !== id) return layer
-            URL.revokeObjectURL(layer.image.key)
             // Mantiene la stessa dimensione a schermo di prima (altrimenti
             // una foto con proporzioni molto diverse potrebbe apparire di
             // colpo enorme o minuscola).
@@ -402,6 +539,7 @@ export default function ConfiguratorPage() {
       const target = layers.find((l) => l.id === id)
       if (target) URL.revokeObjectURL(target.image.key)
       const next = layers.filter((l) => l.id !== id)
+      layerCountRef.current = next.length
       setLayers(next)
       setSelectedLayerId((current) => (current === id ? (next.length > 0 ? next[next.length - 1].id : null) : current))
       setLastExportedBlob(null)
@@ -501,9 +639,19 @@ export default function ConfiguratorPage() {
     downloadBlob(lastExportedBlob, product.exportFileName)
   }, [product, lastExportedBlob])
 
-  const handleSelectPricingOption = useCallback((groupId: string, optionId: string) => {
-    setPricingSelections((current) => ({ ...current, [groupId]: optionId }))
-  }, [])
+  const handleSelectPricingOption = useCallback(
+    (groupId: string, optionId: string) => {
+      const pricingConfig = product?.pricing
+      setPricingSelections((current) => {
+        const next = { ...current, [groupId]: optionId }
+        // Le selezioni vengono rese coerenti nel momento stesso della scelta,
+        // così lo stato salvato nella bozza e quello codificato nel link
+        // condivisibile non contengono mai una combinazione impossibile.
+        return pricingConfig ? resolveSelections(pricingConfig, next) : next
+      })
+    },
+    [product],
+  )
 
   const handleDiscardDraft = useCallback(() => {
     if (!product?.pricing) return
@@ -526,7 +674,8 @@ export default function ConfiguratorPage() {
    * sostituito (`URL.revokeObjectURL` invaliderebbe anche la copia).
    */
   const handleDuplicateLayer = useCallback(() => {
-    if (!selectedLayer || layers.length >= MAX_LAYERS) return
+    if (!selectedLayer || layerCountRef.current >= MAX_LAYERS) return
+
     const { element, width, height } = selectedLayer.image
     const canvas = document.createElement('canvas')
     canvas.width = width
@@ -534,11 +683,35 @@ export default function ConfiguratorPage() {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
     ctx.drawImage(element, 0, 0, width, height)
+
+    // Il posto viene prenotato subito: la duplicazione è asincrona e senza
+    // questo il pulsante potrebbe essere premuto più volte di fila e superare
+    // il numero massimo di strati.
+    layerCountRef.current += 1
+    const generation = loadGenerationRef.current
+    const releaseSlot = () => {
+      if (loadGenerationRef.current === generation) layerCountRef.current = Math.max(0, layerCountRef.current - 1)
+    }
+
     canvas.toBlob((blob) => {
-      if (!blob) return
+      if (!blob) {
+        releaseSlot()
+        playError()
+        pushToast(t('configuratorPage.errorDuplicate'), 'error')
+        return
+      }
+      if (loadGenerationRef.current !== generation) {
+        releaseSlot()
+        return
+      }
+
       const url = URL.createObjectURL(blob)
       const clone = new Image()
       clone.onload = () => {
+        if (loadGenerationRef.current !== generation) {
+          URL.revokeObjectURL(url)
+          return
+        }
         const offset = 28
         const newLayer: ImageLayer = {
           id: createLayerId(),
@@ -550,9 +723,18 @@ export default function ConfiguratorPage() {
         setLastExportedBlob(null)
         playUpload()
       }
+      // Senza `onerror` un fallimento nella decodifica lasciava il posto
+      // occupato per sempre e l'URL oggetto appeso in memoria, senza che
+      // l'utente ricevesse alcun messaggio.
+      clone.onerror = () => {
+        URL.revokeObjectURL(url)
+        releaseSlot()
+        playError()
+        pushToast(t('configuratorPage.errorDuplicate'), 'error')
+      }
       clone.src = url
-    })
-  }, [selectedLayer, layers.length])
+    }, 'image/png')
+  }, [selectedLayer, pushToast, t])
 
   /**
    * Sposta uno strato avanti/indietro nell'ordine di sovrapposizione: dato
@@ -646,8 +828,11 @@ export default function ConfiguratorPage() {
           e.preventDefault()
           updateLayerTransform(selectedLayerId, (t) => ({ ...t, rotation: normalizeRotation(t.rotation + 5) }))
           break
+        // Solo Canc, NON Backspace: su Backspace è troppo facile cancellare
+        // un'immagine per sbaglio uscendo da un campo di testo, e il ripristino
+        // con Ctrl+Z non è immediato (la cronologia si consolida dopo una
+        // breve pausa).
         case 'Delete':
-        case 'Backspace':
           e.preventDefault()
           handleRemoveLayer(selectedLayerId)
           break
@@ -666,12 +851,88 @@ export default function ConfiguratorPage() {
 
   const pricing = product.pricing
   const total = pricing ? computeTotal(pricing, pricingSelections) : null
+
+  // Configurazione condivisibile: prodotto + scelte + note + contatti. Da qui
+  // nascono sia il link che riapre esattamente questo preventivo sia il
+  // codice breve da citare nelle conversazioni — i due elementi che rendono
+  // una richiesta ricostruibile senza doverla ricomporre a mano.
+  const sharedConfig: SharedConfig | null = pricing
+    ? { categorySlug, modelSlug, selections: pricingSelections, notes, contact }
+    : null
+  const configUrl = sharedConfig ? buildConfigUrl(sharedConfig) : null
+  const orderCode = sharedConfig ? makeOrderCode(sharedConfig) : null
+
   // Il riepilogo mostrato a schermo (`orderSummaryLines`) è tradotto nella
   // lingua corrente per il cliente; il testo inviato via email/Instagram
   // (`orderSummaryText`, tramite `formatOrderSummaryText`) resta invece
   // sempre in italiano di proposito, perché è indirizzato a RetroAvia.
   const orderSummaryLines = pricing ? buildOrderSummary(pricing, pricingSelections, locale) : null
-  const orderSummaryText = pricing ? formatOrderSummaryText(pricing, pricingSelections, notes) : null
+  const orderSummaryText = pricing
+    ? formatOrderSummaryText(pricing, pricingSelections, notes, {
+        orderCode: orderCode ?? undefined,
+        configUrl: configUrl ?? undefined,
+        contact,
+      })
+    : null
+
+  /**
+   * Condivisione nativa: passa il render (e il riepilogo come testo)
+   * direttamente al foglio di condivisione del telefono.
+   *
+   * È il percorso più corto verso l'invio — niente download, niente allegato
+   * da ritrovare in galleria — e per questo è anche quello in cui si perdono
+   * meno richieste. Se il render non è ancora stato generato lo genera al
+   * volo, così il pulsante non richiede due passaggi separati.
+   */
+  const handleShareRender = async () => {
+    if (!product) return
+    setIsSharing(true)
+    setErrorMessage(null)
+    try {
+      let blob = lastExportedBlob
+      if (!blob) {
+        if (!baseImageEl || layers.length === 0) return
+        blob = await renderProductComposite({
+          product,
+          baseImageEl,
+          layers: layers.map((l) => ({ element: l.image.element, transform: l.transform })),
+          overlayImageEl,
+        })
+        setLastExportedBlob(blob)
+      }
+
+      const shareBody = [`${product.name} — ${SITE_NAME}`, orderSummaryText ?? '']
+        .filter(Boolean)
+        .join('\n\n')
+
+      const outcome = await shareImage({
+        blob,
+        fileName: product.exportFileName,
+        title: `${product.name} — ${SITE_NAME}`,
+        text: shareBody,
+      })
+
+      if (outcome === 'shared') {
+        playExportSuccess()
+        trackEvent('render_shared', { product: product.slug, category: product.categorySlug })
+      } else if (outcome === 'error' || outcome === 'unsupported') {
+        // Se la condivisione non è disponibile o fallisce, il render viene
+        // comunque scaricato: l'utente resta con qualcosa in mano invece che
+        // con un pulsante che non ha fatto nulla.
+        downloadBlob(blob, product.exportFileName)
+        pushToast(t('sendPanel.shareFallback'), 'error')
+      }
+      // 'cancelled' non è un errore: l'utente ha semplicemente chiuso il
+      // foglio di condivisione, non serve dirgli nulla.
+    } catch {
+      playError()
+      const message = t('configuratorPage.errorExport')
+      setErrorMessage(message)
+      pushToast(message, 'error')
+    } finally {
+      setIsSharing(false)
+    }
+  }
 
   const handleGenerateQuoteCard = async () => {
     if (!product || !pricing || !lastExportedBlob) return
@@ -686,6 +947,7 @@ export default function ConfiguratorPage() {
         baseLabel: pricing.baseLabel,
         total: total ?? pricing.basePrice,
         notes,
+        orderCode: orderCode ?? undefined,
       })
       downloadBlob(blob, product.exportFileName.replace(/\.png$/, '-preventivo-instagram.png'))
       playExportSuccess()
@@ -763,7 +1025,7 @@ export default function ConfiguratorPage() {
             showGrid={showGrid}
             debugCoordinates={debugCoordinates}
             errorMessage={errorMessage}
-            onFileSelected={(file) => handleAddImageFiles([file])}
+            onFilesSelected={handleAddImageFiles}
             onRequestUpload={openAddFilePicker}
             previewOriginal={previewOriginal}
           />
@@ -804,6 +1066,16 @@ export default function ConfiguratorPage() {
         </div>
       </div>
 
+      {/* Avviso quando si è arrivati da un link di configurazione: senza, chi
+          apre il link non capisce perché trova già tutte le opzioni scelte. */}
+      {fromSharedLink && (
+        <div className="mt-8 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-2xl border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-ink">
+          <span aria-hidden="true">🔗</span>
+          {t('configuratorPage.sharedConfigNotice')}
+          {orderCode && <span className="font-mono text-xs font-bold text-accent">{orderCode}</span>}
+        </div>
+      )}
+
       {pricing && (
         <div className="mt-8">
           <PricingPanel
@@ -832,6 +1104,15 @@ export default function ConfiguratorPage() {
             orderSummaryText={orderSummaryText}
             onGenerateQuoteCard={handleGenerateQuoteCard}
             isGeneratingQuoteCard={isGeneratingQuoteCard}
+            orderCode={orderCode}
+            configUrl={configUrl}
+            contact={contact}
+            onContactChange={setContact}
+            rightsAccepted={rightsAccepted}
+            onRightsAcceptedChange={setRightsAccepted}
+            canShareRender={canShareRender}
+            onShareRender={handleShareRender}
+            isSharing={isSharing}
           />
         </div>
       )}

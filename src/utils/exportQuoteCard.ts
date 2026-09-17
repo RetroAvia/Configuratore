@@ -1,6 +1,7 @@
 import type { ProductConfig } from '../types/product'
 import type { OrderSummaryLine } from './pricing'
 import { formatPriceDelta, formatTotal } from './pricing'
+import { RETROAVIA_EMAIL, RETROAVIA_INSTAGRAM_HANDLE } from '../config/site'
 
 /**
  * Genera un'unica immagine "biglietto preventivo": il render della
@@ -20,6 +21,8 @@ interface QuoteCardOptions {
   baseLabel: string
   total: number
   notes: string
+  /** Codice breve della richiesta: stampato sul biglietto, è ciò che permette di ritrovarla in chat mesi dopo. */
+  orderCode?: string
 }
 
 const CARD_WIDTH = 1080
@@ -108,8 +111,9 @@ export async function renderQuoteCard({
   baseLabel,
   total,
   notes,
+  orderCode,
 }: QuoteCardOptions): Promise<Blob> {
-  const [renderImg, logoImg] = await Promise.all([loadImageFromBlob(renderBlob), loadImage('/logo.png')])
+  const [renderImg, logoImg] = await Promise.all([loadImageFromBlob(renderBlob), loadImage('/logo-128.webp')])
 
   const canvas = document.createElement('canvas')
   canvas.width = CARD_WIDTH
@@ -157,6 +161,29 @@ export async function renderQuoteCard({
   ctx.font = '600 22px system-ui, -apple-system, "Segoe UI", sans-serif'
   ctx.fillStyle = COLOR_INK_MUTED
   ctx.fillText('Preventivo personalizzazione', wordmarkX, cursorY + logoSize / 2 + 26)
+
+  // Codice della richiesta, in alto a destra: è il riferimento che permette a
+  // RetroAvia di ritrovare questa esatta configurazione in una conversazione
+  // anche molto tempo dopo, senza dover ricostruire nulla a memoria.
+  if (orderCode) {
+    ctx.font = '700 24px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace'
+    ctx.textAlign = 'right'
+    const codeWidth = ctx.measureText(orderCode).width
+    const badgeW = codeWidth + 36
+    const badgeH = 44
+    const badgeX = CARD_WIDTH - MARGIN_X - badgeW
+    const badgeY = cursorY + logoSize / 2 - badgeH / 2
+    ctx.fillStyle = 'rgba(232,176,75,0.14)'
+    roundRectPath(ctx, badgeX, badgeY, badgeW, badgeH, 22)
+    ctx.fill()
+    ctx.strokeStyle = 'rgba(232,176,75,0.45)'
+    ctx.lineWidth = 2
+    roundRectPath(ctx, badgeX, badgeY, badgeW, badgeH, 22)
+    ctx.stroke()
+    ctx.fillStyle = COLOR_ACCENT
+    ctx.fillText(orderCode, CARD_WIDTH - MARGIN_X - 18, badgeY + badgeH / 2)
+    ctx.textAlign = 'left'
+  }
 
   cursorY += logoSize + 46
 
@@ -250,7 +277,7 @@ export async function renderQuoteCard({
   ctx.font = '500 22px system-ui, -apple-system, "Segoe UI", sans-serif'
   ctx.fillStyle = COLOR_INK_MUTED
   ctx.textAlign = 'center'
-  ctx.fillText('@retroavia_  ·  retroaviaofficial@gmail.com', CARD_WIDTH / 2, CARD_HEIGHT - 54)
+  ctx.fillText(`@${RETROAVIA_INSTAGRAM_HANDLE}  ·  ${RETROAVIA_EMAIL}`, CARD_WIDTH / 2, CARD_HEIGHT - 54)
   ctx.textAlign = 'left'
 
   return new Promise((resolve, reject) => {

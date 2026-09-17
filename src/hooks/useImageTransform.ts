@@ -20,6 +20,32 @@ export function clampScale(scale: number): number {
   return Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale))
 }
 
+/**
+ * Numero di tacche della slider "Dimensione".
+ *
+ * La slider NON è lineare: con una scala che va da 0,05 a 8, una slider
+ * lineare concentrerebbe tutto l'intervallo davvero usato (grosso modo fra
+ * 0,3 e 2) nei primi tre centimetri della barra, rendendo impossibile una
+ * regolazione fine proprio dove serve. Con una scala logaritmica ogni tacca
+ * cambia la dimensione della stessa PERCENTUALE, che è il modo in cui
+ * l'occhio percepisce un ingrandimento: il controllo risulta uniforme su
+ * tutta la corsa.
+ */
+export const SCALE_SLIDER_STEPS = 1000
+
+/** Converte una scala reale nella posizione corrispondente della slider (0…SCALE_SLIDER_STEPS). */
+export function scaleToSliderValue(scale: number): number {
+  const clamped = clampScale(scale)
+  const ratio = Math.log(clamped / MIN_SCALE) / Math.log(MAX_SCALE / MIN_SCALE)
+  return Math.round(ratio * SCALE_SLIDER_STEPS)
+}
+
+/** Converte la posizione della slider nella scala reale corrispondente. */
+export function sliderValueToScale(value: number): number {
+  const ratio = Math.min(1, Math.max(0, value / SCALE_SLIDER_STEPS))
+  return clampScale(MIN_SCALE * Math.pow(MAX_SCALE / MIN_SCALE, ratio))
+}
+
 /** Normalizza un angolo in gradi nell'intervallo (-180, 180], più leggibile in UI. */
 export function normalizeRotation(rotation: number): number {
   let normalized = rotation % 360

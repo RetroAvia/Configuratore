@@ -4,7 +4,9 @@ import { useLanguage } from '../i18n/LanguageContext'
 
 export default function NotFoundPage() {
   const { t } = useLanguage()
-  usePageMeta({ title: t('notFoundPage.metaTitle') })
+  // `noindex`: una pagina "non trovata" raggiunta da un link vecchio non deve
+  // finire nei risultati di ricerca.
+  usePageMeta({ title: t('notFoundPage.metaTitle'), noindex: true })
 
   return (
     <div className="mx-auto flex max-w-xl flex-col items-center px-4 py-28 text-center">

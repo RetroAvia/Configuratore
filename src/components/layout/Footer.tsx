@@ -21,8 +21,11 @@ export default function Footer() {
           <div className="relative flex flex-col items-center gap-5 text-center sm:flex-row sm:justify-between sm:text-left">
             <div className="flex items-center gap-4">
               <img
-                src="/logo.png"
+                src="/logo-128.webp"
                 alt="RetroAvia"
+                width={64}
+                height={64}
+                loading="lazy"
                 className="h-16 w-16 rounded-2xl shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
               />
               <div>

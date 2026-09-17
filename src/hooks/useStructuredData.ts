@@ -18,7 +18,11 @@ export function useStructuredData(data: Record<string, unknown> | null): void {
     document.head.appendChild(script)
 
     return () => {
-      document.head.removeChild(script)
+      // `remove()` invece di `head.removeChild(script)`: se per qualunque
+      // motivo il tag fosse già stato tolto dal documento, `removeChild`
+      // lancerebbe un'eccezione durante la pulizia, facendo cadere l'intero
+      // albero React in un punto in cui non c'è modo di recuperare.
+      script.remove()
     }
   }, [data])
 }

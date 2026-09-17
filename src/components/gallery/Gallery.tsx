@@ -23,7 +23,10 @@ export default function Gallery() {
               <img
                 src={item.image}
                 alt={item.alt}
+                width={400}
+                height={500}
                 loading="lazy"
+                decoding="async"
                 className="h-full w-full object-cover transition-transform duration-700 ease-fluid group-hover:scale-110"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-page/95 via-page/10 to-transparent opacity-70 transition-opacity duration-500 ease-fluid group-hover:opacity-90" />

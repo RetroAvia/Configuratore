@@ -1,5 +1,6 @@
+import { memo } from 'react'
 import type { ButtonHTMLAttributes, MouseEvent } from 'react'
-import { MAX_SCALE, MIN_SCALE } from '../../hooks/useImageTransform'
+import { SCALE_SLIDER_STEPS, scaleToSliderValue, sliderValueToScale } from '../../hooks/useImageTransform'
 import type { ImageTransform } from '../../hooks/useImageTransform'
 import type { ImageLayer } from '../../types/layers'
 import { playClick } from '../../utils/sound'
@@ -54,7 +55,7 @@ function IconButton({
   )
 }
 
-export default function Toolbar({
+function Toolbar({
   layers,
   selectedLayerId,
   selectedTransform,
@@ -190,14 +191,18 @@ export default function Toolbar({
               <label htmlFor="scale-range">{t('toolbar.sizeLabel')}</label>
               <span className="font-mono text-ink">{scalePercent}%</span>
             </div>
+            {/* Slider logaritmica: vedi `scaleToSliderValue` in
+                hooks/useImageTransform.ts. `aria-valuetext` fa annunciare
+                "120%" invece del numero grezzo della tacca. */}
             <input
               id="scale-range"
               type="range"
-              min={MIN_SCALE}
-              max={MAX_SCALE}
-              step={0.01}
-              value={selectedTransform?.scale ?? 1}
-              onChange={(e) => onScaleChange(Number(e.target.value))}
+              min={0}
+              max={SCALE_SLIDER_STEPS}
+              step={1}
+              value={scaleToSliderValue(selectedTransform?.scale ?? 1)}
+              aria-valuetext={`${scalePercent}%`}
+              onChange={(e) => onScaleChange(sliderValueToScale(Number(e.target.value)))}
               disabled={!selectedTransform}
             />
           </div>
@@ -214,6 +219,7 @@ export default function Toolbar({
               max={180}
               step={1}
               value={selectedTransform?.rotation ?? 0}
+              aria-valuetext={`${Math.round(selectedTransform?.rotation ?? 0)}°`}
               onChange={(e) => onRotationChange(Number(e.target.value))}
               disabled={!selectedTransform}
             />
@@ -293,3 +299,6 @@ export default function Toolbar({
     </div>
   )
 }
+
+/** `memo`: vedi il commento in `PricingPanel` — durante un trascinamento il padre si ri-renderizza in continuazione. */
+export default memo(Toolbar)

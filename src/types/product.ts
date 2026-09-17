@@ -63,6 +63,28 @@ export interface CompoundClipShape {
 export type ClipShape = SimpleClipShape | CompoundClipShape
 
 /**
+ * Condizione che rende disponibile un'opzione (o un intero gruppo) solo in
+ * presenza di una certa scelta fatta in un ALTRO gruppo.
+ *
+ * Serve a impedire preventivi impossibili: senza questo vincolo un cliente
+ * potrebbe scegliere "Solo Game Boy (senza modifiche)" e insieme un display
+ * IPS e un kit LED — combinazione che poi andrebbe rinegoziata a mano,
+ * facendo perdere tempo a lui e credibilità al preventivo.
+ *
+ * Quando la condizione non è soddisfatta l'opzione viene mostrata
+ * disattivata (con la spiegazione del perché) e non può essere selezionata;
+ * se era già selezionata, la selezione ricade automaticamente sulla prima
+ * opzione disponibile del gruppo — così il totale non conta mai una voce
+ * impossibile.
+ */
+export interface OptionRequirement {
+  /** Id del gruppo da cui dipende la disponibilità. */
+  groupId: string
+  /** Id delle opzioni di quel gruppo che soddisfano la condizione (ne basta una). */
+  optionIds: string[]
+}
+
+/**
  * Una singola opzione selezionabile all'interno di un gruppo di modifiche
  * (es. "Con scocca semplice" dentro al gruppo "Livello di Modifica").
  *
@@ -92,6 +114,12 @@ export interface PriceOptionValue {
   labelI18n?: Localized
   /** Traduzioni di `note`. */
   noteI18n?: Localized
+  /**
+   * Condizioni che devono essere TUTTE soddisfatte perché questa opzione sia
+   * selezionabile (vedi `OptionRequirement`). Se omesso, l'opzione è sempre
+   * disponibile.
+   */
+  requires?: OptionRequirement[]
 }
 
 /** Un gruppo di opzioni mutuamente esclusive: esattamente una selezionata, come un set di radio button. */
@@ -123,6 +151,13 @@ export interface PriceOptionGroup {
   helperTextI18n?: Localized
   /** Traduzioni di `info`. */
   infoI18n?: Localized
+  /**
+   * Condizioni che devono essere TUTTE soddisfatte perché l'INTERO gruppo
+   * sia disponibile (es. "Colore Scocca" ha senso solo se si è scelto di
+   * montare una scocca nuova). Quando non lo sono, il gruppo resta visibile
+   * ma disattivato, con la spiegazione del perché.
+   */
+  requires?: OptionRequirement[]
 }
 
 /**
@@ -154,9 +189,13 @@ export interface ProductConfig {
   /** Traduzioni di `description` (il `name`, essendo un nome di modello/marchio, resta invariato in ogni lingua). */
   descriptionI18n?: Localized
   /**
-   * Percorso (in `public/`) dell'immagine miniatura usata nelle card di
-   * elenco. Può coincidere con `baseImage` se non hai ancora una miniatura
-   * dedicata e ottimizzata.
+   * Percorso (in `public/`) della miniatura usata nelle card di elenco.
+   *
+   * Dev'essere un'immagine PICCOLA e dedicata (indicativamente 480px di lato
+   * lungo, formato WebP): puntarla su `baseImage` funziona, ma costringe la
+   * pagina di categoria a scaricare tre immagini da centinaia di kilobyte per
+   * mostrare tre francobolli. Per le anteprime social e i dati strutturati
+   * viene invece usata `baseImage`, che è ad alta risoluzione.
    */
   thumbnail: string
   /**

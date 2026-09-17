@@ -7,6 +7,7 @@ import { playBack } from '../utils/sound'
 import { usePageMeta } from '../hooks/usePageMeta'
 import { useStructuredData } from '../hooks/useStructuredData'
 import { useLanguage } from '../i18n/LanguageContext'
+import { absoluteUrl, SITE_NAME } from '../config/site'
 import { useMemo } from 'react'
 
 export default function CategoryPage() {
@@ -19,6 +20,8 @@ export default function CategoryPage() {
   usePageMeta({
     title: category ? t('categoryPage.metaTitle', { categoryName }) : t('categoryPage.notFoundMetaTitle'),
     description: category ? tr(category.description, category.descriptionI18n) : undefined,
+    path: category ? `/${category.slug}` : undefined,
+    noindex: !category,
   })
 
   // Dati strutturati Schema.org (BreadcrumbList), per aiutare Google a
@@ -32,14 +35,14 @@ export default function CategoryPage() {
         {
           '@type': 'ListItem',
           position: 1,
-          name: 'RetroAvia Lab',
-          item: 'https://configuratore-five.vercel.app/',
+          name: SITE_NAME,
+          item: absoluteUrl('/'),
         },
         {
           '@type': 'ListItem',
           position: 2,
           name: categoryName,
-          item: `https://configuratore-five.vercel.app/${category.slug}`,
+          item: absoluteUrl(`/${category.slug}`),
         },
       ],
     }

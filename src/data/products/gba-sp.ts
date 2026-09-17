@@ -34,7 +34,7 @@ export const gbaSp: ProductConfig = {
     es: 'La consola portátil de concha de Nintendo. Personaliza la carcasa frontal con tu propia imagen.',
     fr: 'La console portable à clapet de Nintendo. Personnalisez la coque avant avec votre propre image.',
   },
-  thumbnail: '/products/gba-sp/base.webp',
+  thumbnail: '/products/gba-sp/thumb.webp',
   baseImage: '/products/gba-sp/base.webp',
   canvas: {
     width: 1747,

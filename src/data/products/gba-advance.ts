@@ -32,7 +32,7 @@ export const gbaAdvance: ProductConfig = {
     es: 'La histórica consola portátil de Nintendo. Personaliza la carcasa con tu propia imagen, dejando intactos la pantalla y los botones.',
     fr: 'La console portable historique de Nintendo. Personnalisez la coque avec votre propre image, en laissant l’écran et les boutons inchangés.',
   },
-  thumbnail: '/products/gba-advance/base.webp',
+  thumbnail: '/products/gba-advance/thumb.webp',
   baseImage: '/products/gba-advance/base.webp',
   canvas: {
     width: 2440,

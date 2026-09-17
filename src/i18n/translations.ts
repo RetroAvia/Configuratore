@@ -170,6 +170,36 @@ const it = {
   'toolbar.redo': 'Ripeti',
   'toolbar.compareOriginal': "Confronta con l'originale",
   'toolbar.compareOriginalActive': 'Torna alla tua versione',
+
+
+  // --- Aggiunte: configurazione condivisibile, contatti, condivisione nativa ---
+  'configuratorCanvas.uploadAria': 'Carica un’immagine da personalizzare',
+  'configuratorCanvas.layerAlt': ((vars: Vars) => `Immagine ${vars.index} del tuo collage`) as Value,
+  'configuratorPage.errorDuplicate': "Non è stato possibile duplicare l’immagine.",
+  'configuratorPage.sharedConfigNotice': 'Stai guardando una configurazione ricevuta tramite link: opzioni e note sono già quelle scelte.',
+
+  'pricingPanel.requiresHint': ((vars: Vars) => `Disponibile solo con → ${vars.requirements}`) as Value,
+  'pricingPanel.notesCounter': ((vars: Vars) => `${vars.used}/${vars.max} caratteri`) as Value,
+
+  'sendPanel.contactHeading': 'Come ti ricontattiamo (facoltativo)',
+  'sendPanel.contactHint': 'Se lasci un riferimento possiamo risponderti anche se il messaggio si perde per strada.',
+  'sendPanel.contactName': 'Nome',
+  'sendPanel.contactEmail': 'Email',
+  'sendPanel.contactInstagram': 'Instagram',
+  'sendPanel.rightsLabel':
+    'Dichiaro di avere il diritto di usare l’immagine che ho caricato e di non violare marchi o diritti d’autore altrui.',
+  'sendPanel.rightsRequired': 'Spunta la dichiarazione qui sopra per procedere con l’invio.',
+  'sendPanel.shareNative': 'Condividi render e riepilogo',
+  'sendPanel.sharing': 'Apertura condivisione…',
+  'sendPanel.shareHint': 'Il modo più rapido: immagine e riepilogo insieme, direttamente nella chat che scegli.',
+  'sendPanel.shareFallback': 'Condivisione non disponibile: ho scaricato il render, puoi allegarlo a mano.',
+  'sendPanel.sendWhatsapp': 'Invia su WhatsApp',
+  'sendPanel.mailtoWarning':
+    'Il riepilogo è lungo: alcuni programmi di posta potrebbero troncarlo. Se succede, usa “Copia riepilogo” e incollalo nell’email.',
+  'sendPanel.copyLink': 'Copia link configurazione',
+  'sendPanel.copiedLink': 'Link copiato!',
+  'sendPanel.copyLinkHint':
+    'Il link riapre esattamente questa configurazione: incollalo nel messaggio e potremo modificarla insieme senza rifare tutto.',
 } satisfies Record<string, Value>
 
 type TranslationKey = keyof typeof it
@@ -329,6 +359,35 @@ const en: Record<TranslationKey, Value> = {
   'toolbar.redo': 'Redo',
   'toolbar.compareOriginal': 'Compare with the original',
   'toolbar.compareOriginalActive': 'Back to your version',
+
+  'configuratorCanvas.uploadAria': 'Upload an image to customize',
+  'configuratorCanvas.layerAlt': (vars) => `Image ${vars.index} in your collage`,
+  'configuratorPage.errorDuplicate': 'The image could not be duplicated.',
+  'configuratorPage.sharedConfigNotice': 'You are viewing a configuration received via link: options and notes are already the ones that were chosen.',
+
+  'pricingPanel.requiresHint': (vars) => `Only available with → ${vars.requirements}`,
+  'pricingPanel.notesCounter': (vars) => `${vars.used}/${vars.max} characters`,
+
+  'sendPanel.contactHeading': 'How we can reach you (optional)',
+  'sendPanel.contactHint': 'Leave a contact and we can reply even if the message gets lost along the way.',
+  'sendPanel.contactName': 'Name',
+  'sendPanel.contactEmail': 'Email',
+  'sendPanel.contactInstagram': 'Instagram',
+  'sendPanel.rightsLabel':
+    'I confirm that I have the right to use the image I uploaded and that it does not infringe anyone else’s trademarks or copyright.',
+  'sendPanel.rightsRequired': 'Tick the statement above to continue with sending.',
+  'sendPanel.shareNative': 'Share render and summary',
+  'sendPanel.sharing': 'Opening share sheet…',
+  'sendPanel.shareHint': 'The quickest route: image and summary together, straight into the chat you pick.',
+  'sendPanel.shareFallback': 'Sharing is not available: the render has been downloaded, you can attach it manually.',
+  'sendPanel.sendWhatsapp': 'Send on WhatsApp',
+  'sendPanel.mailtoWarning':
+    'The summary is long and some mail apps may cut it off. If that happens, use “Copy summary” and paste it into the email.',
+  'sendPanel.copyLink': 'Copy configuration link',
+  'sendPanel.copiedLink': 'Link copied!',
+  'sendPanel.copyLinkHint':
+    'The link reopens exactly this configuration: paste it into your message and we can adjust it together without starting over.',
+
 }
 
 const es: Record<TranslationKey, Value> = {
@@ -485,6 +544,35 @@ const es: Record<TranslationKey, Value> = {
   'toolbar.redo': 'Rehacer',
   'toolbar.compareOriginal': 'Comparar con el original',
   'toolbar.compareOriginalActive': 'Volver a tu versión',
+
+  'configuratorCanvas.uploadAria': 'Sube una imagen para personalizar',
+  'configuratorCanvas.layerAlt': (vars) => `Imagen ${vars.index} de tu collage`,
+  'configuratorPage.errorDuplicate': 'No se ha podido duplicar la imagen.',
+  'configuratorPage.sharedConfigNotice': 'Estás viendo una configuración recibida por enlace: las opciones y las notas ya son las elegidas.',
+
+  'pricingPanel.requiresHint': (vars) => `Solo disponible con → ${vars.requirements}`,
+  'pricingPanel.notesCounter': (vars) => `${vars.used}/${vars.max} caracteres`,
+
+  'sendPanel.contactHeading': 'Cómo contactarte (opcional)',
+  'sendPanel.contactHint': 'Si dejas un contacto podemos responderte aunque el mensaje se pierda por el camino.',
+  'sendPanel.contactName': 'Nombre',
+  'sendPanel.contactEmail': 'Email',
+  'sendPanel.contactInstagram': 'Instagram',
+  'sendPanel.rightsLabel':
+    'Declaro que tengo derecho a usar la imagen que he subido y que no infringe marcas ni derechos de autor de terceros.',
+  'sendPanel.rightsRequired': 'Marca la declaración de arriba para continuar con el envío.',
+  'sendPanel.shareNative': 'Compartir render y resumen',
+  'sendPanel.sharing': 'Abriendo el menú de compartir…',
+  'sendPanel.shareHint': 'La vía más rápida: imagen y resumen juntos, directamente en el chat que elijas.',
+  'sendPanel.shareFallback': 'Compartir no está disponible: he descargado el render, puedes adjuntarlo a mano.',
+  'sendPanel.sendWhatsapp': 'Enviar por WhatsApp',
+  'sendPanel.mailtoWarning':
+    'El resumen es largo y algunos programas de correo podrían cortarlo. Si ocurre, usa “Copiar resumen” y pégalo en el email.',
+  'sendPanel.copyLink': 'Copiar enlace de configuración',
+  'sendPanel.copiedLink': '¡Enlace copiado!',
+  'sendPanel.copyLinkHint':
+    'El enlace reabre exactamente esta configuración: pégalo en tu mensaje y podremos ajustarla juntos sin empezar de cero.',
+
 }
 
 const fr: Record<TranslationKey, Value> = {
@@ -642,6 +730,35 @@ const fr: Record<TranslationKey, Value> = {
   'toolbar.redo': 'Rétablir',
   'toolbar.compareOriginal': "Comparer avec l'original",
   'toolbar.compareOriginalActive': 'Revenir à votre version',
+
+  'configuratorCanvas.uploadAria': 'Importez une image à personnaliser',
+  'configuratorCanvas.layerAlt': (vars) => `Image ${vars.index} de votre collage`,
+  'configuratorPage.errorDuplicate': 'Impossible de dupliquer l’image.',
+  'configuratorPage.sharedConfigNotice': 'Vous consultez une configuration reçue par lien : les options et les notes sont déjà celles qui ont été choisies.',
+
+  'pricingPanel.requiresHint': (vars) => `Disponible uniquement avec → ${vars.requirements}`,
+  'pricingPanel.notesCounter': (vars) => `${vars.used}/${vars.max} caractères`,
+
+  'sendPanel.contactHeading': 'Comment vous recontacter (facultatif)',
+  'sendPanel.contactHint': 'Laissez un contact et nous pourrons vous répondre même si le message se perd en route.',
+  'sendPanel.contactName': 'Nom',
+  'sendPanel.contactEmail': 'E-mail',
+  'sendPanel.contactInstagram': 'Instagram',
+  'sendPanel.rightsLabel':
+    'Je déclare avoir le droit d’utiliser l’image que j’ai importée et qu’elle ne porte atteinte à aucune marque ni à aucun droit d’auteur.',
+  'sendPanel.rightsRequired': 'Cochez la déclaration ci-dessus pour poursuivre l’envoi.',
+  'sendPanel.shareNative': 'Partager le rendu et le récapitulatif',
+  'sendPanel.sharing': 'Ouverture du partage…',
+  'sendPanel.shareHint': 'Le chemin le plus court : image et récapitulatif ensemble, directement dans la conversation de votre choix.',
+  'sendPanel.shareFallback': 'Partage indisponible : le rendu a été téléchargé, vous pouvez le joindre manuellement.',
+  'sendPanel.sendWhatsapp': 'Envoyer sur WhatsApp',
+  'sendPanel.mailtoWarning':
+    'Le récapitulatif est long et certains logiciels de messagerie peuvent le tronquer. Dans ce cas, utilisez « Copier le récapitulatif » et collez-le dans l’e-mail.',
+  'sendPanel.copyLink': 'Copier le lien de configuration',
+  'sendPanel.copiedLink': 'Lien copié !',
+  'sendPanel.copyLinkHint':
+    'Le lien rouvre exactement cette configuration : collez-le dans votre message et nous pourrons l’ajuster ensemble sans tout refaire.',
+
 }
 
 const dictionaries: Record<Locale, Record<TranslationKey, Value>> = { it, en, es, fr }

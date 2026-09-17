@@ -1,5 +1,10 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
-import type { DragEvent, PointerEvent as ReactPointerEvent, ReactElement, WheelEvent } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type {
+  DragEvent,
+  KeyboardEvent as ReactKeyboardEvent,
+  PointerEvent as ReactPointerEvent,
+  ReactElement,
+} from 'react'
 import type { ProductConfig } from '../../types/product'
 import type { ImageLayer } from '../../types/layers'
 import type { ImageTransform } from '../../hooks/useImageTransform'
@@ -7,6 +12,7 @@ import { clampScale, normalizeRotation } from '../../hooks/useImageTransform'
 import { clipAreaToCssClipPath, clipAreaToSvgPath, getClipAreaCenter, simpleClipAreaToCssClipPath } from '../../utils/clipShapes'
 import UploadPrompt from './UploadPrompt'
 import { playSnap } from '../../utils/sound'
+import { useLanguage } from '../../i18n/LanguageContext'
 
 interface ConfiguratorCanvasProps {
   product: ProductConfig
@@ -20,7 +26,8 @@ interface ConfiguratorCanvasProps {
   showGrid: boolean
   debugCoordinates: boolean
   errorMessage: string | null
-  onFileSelected: (file: File) => void
+  /** Immagini trascinate sul configuratore: ne vengono accettate più di una alla volta, come dall'input file. */
+  onFilesSelected: (files: File[]) => void
   onRequestUpload: () => void
   /** Quando true, nasconde temporaneamente il collage e la griglia di editing per mostrare la foto originale del prodotto (confronto prima/dopo). */
   previewOriginal: boolean
@@ -50,7 +57,7 @@ function localToStage(lx: number, ly: number, t: ImageTransform): { x: number; y
 
 type InteractionMode = 'idle' | 'move' | 'pinch'
 
-export default function ConfiguratorCanvas({
+function ConfiguratorCanvas({
   product,
   baseImageEl,
   overlayImageEl,
@@ -61,10 +68,11 @@ export default function ConfiguratorCanvas({
   showGrid,
   debugCoordinates,
   errorMessage,
-  onFileSelected,
+  onFilesSelected,
   onRequestUpload,
   previewOriginal,
 }: ConfiguratorCanvasProps) {
+  const { t } = useLanguage()
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [isDraggingFile, setIsDraggingFile] = useState(false)
   const [isInteracting, setIsInteracting] = useState(false)
@@ -102,11 +110,15 @@ export default function ConfiguratorCanvas({
   // ridisegna sopra — con il suo stesso identico ritaglio CSS, stavolta
   // semplice — un frammento della foto originale del prodotto.
   const isCompoundClip = product.clipArea.type === 'compound'
-  const holes = product.clipArea.type === 'compound' ? product.clipArea.holes : []
-  const holeClipPaths = useMemo(
-    () => holes.map((hole) => simpleClipAreaToCssClipPath(hole, product.canvas)),
-    [holes, product.canvas],
-  )
+  // I ritagli dei fori dipendono solo dal prodotto: memorizzarli su
+  // `product.clipArea` (e non su un array ricreato a ogni render, come
+  // avveniva prima) fa sì che la memoizzazione serva davvero — su Game Boy
+  // Color e Advance sono percorsi da centinaia di punti, ricalcolati fino a
+  // sessanta volte al secondo durante un trascinamento.
+  const holeClipPaths = useMemo(() => {
+    const holes = product.clipArea.type === 'compound' ? product.clipArea.holes : []
+    return holes.map((hole) => simpleClipAreaToCssClipPath(hole, product.canvas))
+  }, [product.clipArea, product.canvas])
   const clipPathCss = useMemo(() => clipAreaToCssClipPath(product.clipArea, product.canvas), [product])
   const clipOutlineD = useMemo(() => clipAreaToSvgPath(product.clipArea), [product])
   const clipCenter = useMemo(() => getClipAreaCenter(product.clipArea), [product])
@@ -141,17 +153,39 @@ export default function ConfiguratorCanvas({
     return { x: selectedLayer.transform.x + upX * dist, y: selectedLayer.transform.y + upY * dist }
   }, [selectedLayer, rotateGap])
 
-  // --- Drag & drop file (aggiunge sempre un NUOVO strato al collage) -----
-  const handleDragOver = (e: DragEvent) => {
-    e.preventDefault()
-    if (e.dataTransfer.types.includes('Files')) setIsDraggingFile(true)
+  // --- Drag & drop file (aggiunge sempre NUOVI strati al collage) --------
+  //
+  // `dragenter`/`dragleave` scattano anche passando da un elemento figlio
+  // all'altro dentro lo stesso riquadro: contando quante volte si entra e si
+  // esce, l'evidenziazione si spegne solo quando il puntatore lascia davvero
+  // l'area (prima sfarfallava a ogni passaggio sopra un'immagine o una
+  // maniglia).
+  const dragDepthRef = useRef(0)
+
+  const handleDragEnter = (e: DragEvent) => {
+    if (!e.dataTransfer.types.includes('Files')) return
+    dragDepthRef.current += 1
+    setIsDraggingFile(true)
   }
-  const handleDragLeave = () => setIsDraggingFile(false)
+  const handleDragOver = (e: DragEvent) => {
+    // Necessario perché il browser consideri quest'area una destinazione valida.
+    e.preventDefault()
+  }
+  const handleDragLeave = () => {
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1)
+    if (dragDepthRef.current === 0) setIsDraggingFile(false)
+  }
   const handleDrop = (e: DragEvent) => {
     e.preventDefault()
+    dragDepthRef.current = 0
     setIsDraggingFile(false)
-    const file = e.dataTransfer.files?.[0]
-    if (file) onFileSelected(file)
+    // Si accettano tutte le immagini trascinate insieme, esattamente come
+    // dall'input file (che è `multiple`): prima ne veniva presa solo la prima
+    // e le altre sparivano senza alcun messaggio. La validazione di formato e
+    // dimensione resta a chi le riceve, così un file non valido produce il
+    // solito messaggio d'errore tradotto invece di sparire in silenzio.
+    const files = Array.from(e.dataTransfer.files ?? [])
+    if (files.length > 0) onFilesSelected(files)
   }
 
   // --- Sposta / pizzica uno strato (drag a un dito, pinch a due dita) -----
@@ -280,13 +314,35 @@ export default function ConfiguratorCanvas({
   }
 
   // --- Rotellina del mouse (zoom desktop) — sullo strato selezionato ------
-  const handleWheel = (e: WheelEvent) => {
-    if (!selectedLayer) return
-    e.preventDefault()
-    const factor = Math.exp(-e.deltaY * 0.0015)
-    const id = selectedLayer.id
-    onUpdateLayerTransform(id, (t) => ({ ...t, scale: clampScale(t.scale * factor) }))
-  }
+  //
+  // Il listener va registrato a mano, e NON con la prop `onWheel` di React:
+  // React registra gli eventi `wheel` in modalità "passive", nella quale il
+  // browser ignora `preventDefault()`. Il risultato era che girando la
+  // rotellina l'immagine veniva ingrandita ma la pagina scorreva comunque
+  // sotto al puntatore, con un avviso in console.
+  //
+  // Con `{ passive: false }` il comportamento è quello atteso: quando c'è
+  // un'immagine selezionata la rotellina ingrandisce e la pagina resta ferma;
+  // quando non c'è nulla di selezionato (o si sta confrontando con
+  // l'originale) la pagina scorre normalmente, come su qualunque altro sito.
+  const wheelStateRef = useRef({ selectedLayerId, previewOriginal })
+  wheelStateRef.current = { selectedLayerId, previewOriginal }
+
+  useEffect(() => {
+    const element = wrapperRef.current
+    if (!element) return
+
+    const handleWheel = (event: globalThis.WheelEvent) => {
+      const { selectedLayerId: activeId, previewOriginal: isPreviewing } = wheelStateRef.current
+      if (!activeId || isPreviewing) return
+      event.preventDefault()
+      const factor = Math.exp(-event.deltaY * 0.0015)
+      onUpdateLayerTransform(activeId, (transform) => ({ ...transform, scale: clampScale(transform.scale * factor) }))
+    }
+
+    element.addEventListener('wheel', handleWheel, { passive: false })
+    return () => element.removeEventListener('wheel', handleWheel)
+  }, [onUpdateLayerTransform])
 
   const handleWrapperPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (!debugCoordinates) return
@@ -303,6 +359,8 @@ export default function ConfiguratorCanvas({
   }
 
   const showCollage = layers.length > 0 && !previewOriginal
+  /** L'area di ritaglio si comporta da pulsante di caricamento solo finché il collage è vuoto. */
+  const isUploadArea = layers.length === 0 && !previewOriginal
 
   const gridLines = useMemo(() => {
     if (!showGrid) return null
@@ -346,10 +404,10 @@ export default function ConfiguratorCanvas({
         ref={wrapperRef}
         className="relative w-full touch-none select-none overflow-hidden rounded-[2rem] border border-border bg-surface shadow-2xl"
         style={{ aspectRatio: `${nativeW} / ${nativeH}`, containerType: 'inline-size' }}
+        onDragEnter={handleDragEnter}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        onWheel={handleWheel}
         onPointerMove={handleWrapperPointerMove}
       >
         {/* 1. Immagine di base del prodotto */}
@@ -359,6 +417,8 @@ export default function ConfiguratorCanvas({
             alt=""
             aria-hidden="true"
             draggable={false}
+            width={nativeW}
+            height={nativeH}
             className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
           />
         ) : (
@@ -368,6 +428,12 @@ export default function ConfiguratorCanvas({
         {/* 2. Area ritagliata (solo contorno esterno): tutti gli strati del
             collage, nell'ordine in cui sono stati aggiunti, oppure l'invito
             al caricamento se non c'è ancora nessuna immagine. */}
+        {/* Quando non c'è ancora nessuna immagine quest'area È il pulsante di
+            caricamento: va quindi resa raggiungibile da tastiera (Tab, poi
+            Invio o Barra spaziatrice) e annunciata come tale. Con il collage
+            già avviato il clic serve solo a deselezionare — azione che da
+            tastiera è già coperta dal tasto Esc — quindi resta un semplice
+            contenitore, senza intercettare il percorso di navigazione. */}
         <div
           className={previewOriginal ? 'absolute inset-0' : 'absolute inset-0 cursor-pointer'}
           style={{
@@ -376,13 +442,26 @@ export default function ConfiguratorCanvas({
             fontSize: 'clamp(10px, 2.6cqw, 22px)',
           }}
           onClick={handleEmptyAreaClick}
+          {...(isUploadArea
+            ? {
+                role: 'button',
+                tabIndex: 0,
+                'aria-label': t('configuratorCanvas.uploadAria'),
+                onKeyDown: (event: ReactKeyboardEvent<HTMLDivElement>) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    onRequestUpload()
+                  }
+                },
+              }
+            : {})}
         >
           {showCollage ? (
-            layers.map((layer) => (
+            layers.map((layer, index) => (
               <img
                 key={layer.id}
                 src={layer.image.element.src}
-                alt="La tua immagine personalizzata"
+                alt={t('configuratorCanvas.layerAlt', { index: index + 1 })}
                 draggable={false}
                 className="absolute"
                 style={{
@@ -558,3 +637,11 @@ export default function ConfiguratorCanvas({
     </div>
   )
 }
+
+/**
+ * `memo`: il componente padre aggiorna lo stato a ogni movimento del dito
+ * durante un trascinamento. Senza memoizzazione anche i pannelli vicini
+ * verrebbero ricalcolati insieme a questo; con `memo` il canvas si ridisegna
+ * solo quando cambia davvero qualcosa che lo riguarda.
+ */
+export default memo(ConfiguratorCanvas)

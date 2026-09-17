@@ -11,6 +11,7 @@ export default function HomePage() {
   usePageMeta({
     title: t('home.metaTitle'),
     description: t('home.metaDescription'),
+    path: '/',
   })
 
   return (

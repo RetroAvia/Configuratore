@@ -1,4 +1,4 @@
-import type { PriceOptionGroup, PriceOptionValue } from '../../types/product'
+import type { OptionRequirement, PriceOptionGroup, PriceOptionValue } from '../../types/product'
 
 /**
  * Gruppi di opzioni condivisi da tutte le console Game Boy modificabili
@@ -11,6 +11,30 @@ import type { PriceOptionGroup, PriceOptionValue } from '../../types/product'
  * Sono oggetti dati semplici e immutabili: possono essere tranquillamente
  * condivisi per riferimento tra i vari prodotti che li usano.
  */
+
+/**
+ * ─── REGOLE DI COMPATIBILITÀ ───────────────────────────────────────────────
+ *
+ * Alcune lavorazioni richiedono per forza di aprire la console e montarle
+ * una scocca nuova: non hanno senso se il cliente ha scelto "Solo Game Boy
+ * (senza modifiche)". Questa costante è l'unico punto in cui quel vincolo è
+ * scritto: è riutilizzata da tutte le opzioni che lo condividono, così
+ * cambiare idea (o aggiungere un livello di modifica) si fa in un posto solo.
+ *
+ * Senza queste regole il configuratore accettava combinazioni impossibili —
+ * "nessuna modifica" insieme a display IPS, kit LED e colore scocca — che
+ * arrivavano a RetroAvia come preventivi da rinegoziare a mano.
+ *
+ * PER AGGIUNGERE UNA REGOLA: metti `requires: [RICHIEDE_SCOCCA_NUOVA]` sulla
+ * singola opzione (se è solo quella a dipenderne) oppure sul gruppo intero
+ * (se non ha senso nemmeno mostrarlo). Il resto — disattivazione visiva,
+ * spiegazione all'utente, correzione automatica della selezione e del
+ * totale — è già gestito dal motore prezzi (`utils/pricing.ts`).
+ */
+export const RICHIEDE_SCOCCA_NUOVA: OptionRequirement = {
+  groupId: 'livello-modifica',
+  optionIds: ['scocca-semplice', 'scocca-personalizzata'],
+}
 
 export const livelloDiModificaGroup: PriceOptionGroup = {
   id: 'livello-modifica',
@@ -95,6 +119,8 @@ export const audioGroup: PriceOptionGroup = {
       icon: '🎵',
       priceDelta: 10,
       labelI18n: { en: 'New', es: 'Nuevo', fr: 'Neuf' },
+      // Sostituire l'altoparlante richiede di aprire la console.
+      requires: [RICHIEDE_SCOCCA_NUOVA],
     },
   ],
 }
@@ -124,6 +150,8 @@ export const displayGroup: PriceOptionGroup = {
       icon: '✨',
       priceDelta: 60,
       labelI18n: { en: 'IPS V3', es: 'IPS V3', fr: 'IPS V3' },
+      // Il pannello va sostituito all'interno della console.
+      requires: [RICHIEDE_SCOCCA_NUOVA],
     },
   ],
 }
@@ -141,7 +169,15 @@ export const kitLedGroup: PriceOptionGroup = {
   },
   options: [
     { id: 'no', label: 'No', icon: '🌙', priceDelta: 0, labelI18n: { en: 'No', es: 'No', fr: 'Non' } },
-    { id: 'si', label: 'Sì', icon: '✨', priceDelta: 35, labelI18n: { en: 'Yes', es: 'Sí', fr: 'Oui' } },
+    {
+      id: 'si',
+      label: 'Sì',
+      icon: '✨',
+      priceDelta: 35,
+      labelI18n: { en: 'Yes', es: 'Sí', fr: 'Oui' },
+      // I LED vanno integrati dentro la scocca.
+      requires: [RICHIEDE_SCOCCA_NUOVA],
+    },
   ],
 }
 
@@ -212,6 +248,8 @@ export const buttonColorGroup: PriceOptionGroup = {
     es: 'De serie, los botones son del mismo color que la carcasa elegida arriba.',
     fr: 'Par défaut, les boutons sont de la même couleur que la coque choisie ci-dessus.',
   },
+  // Senza una scocca nuova non ci sono pulsanti nuovi da colorare.
+  requires: [RICHIEDE_SCOCCA_NUOVA],
   options: [
     {
       id: 'uguale-scocca',
@@ -254,7 +292,15 @@ export const batteriaSpGroup: PriceOptionGroup = {
       priceDelta: 0,
       labelI18n: { en: 'Original', es: 'Original', fr: 'Original' },
     },
-    { id: '950mah', label: '950 mAh', icon: '⚡', priceDelta: 15, labelI18n: { en: '950 mAh', es: '950 mAh', fr: '950 mAh' } },
+    {
+      id: '950mah',
+      label: '950 mAh',
+      icon: '⚡',
+      priceDelta: 15,
+      labelI18n: { en: '950 mAh', es: '950 mAh', fr: '950 mAh' },
+      // La batteria va sostituita all'interno della console.
+      requires: [RICHIEDE_SCOCCA_NUOVA],
+    },
   ],
 }
 
@@ -284,6 +330,8 @@ export const batteriaUsbCGroup: PriceOptionGroup = {
       icon: '⚡',
       priceDelta: 39.9,
       labelI18n: { en: 'USB-C (rechargeable)', es: 'USB-C (recargable)', fr: 'USB-C (rechargeable)' },
+      // La conversione richiede di aprire la console e modificarne il vano pile.
+      requires: [RICHIEDE_SCOCCA_NUOVA],
     },
   ],
 }
@@ -295,6 +343,8 @@ export function buildColoreScoccaGroup(colors: PriceOptionValue[]): PriceOptionG
     title: 'Colore Scocca',
     icon: '🎨',
     titleI18n: { en: 'Shell Color', es: 'Color de Carcasa', fr: 'Couleur de la Coque' },
+    // Il colore si sceglie solo se una scocca nuova viene effettivamente montata.
+    requires: [RICHIEDE_SCOCCA_NUOVA],
     options: colors,
   }
 }

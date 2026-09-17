@@ -21,7 +21,7 @@ export const casioF91w: ProductConfig = {
     es: 'El icónico reloj digital de Casio. Sube tu propia imagen y personaliza la esfera a tu gusto.',
     fr: 'La montre digitale iconique de Casio. Importez votre image et personnalisez le cadran à votre façon.',
   },
-  thumbnail: '/products/casio-f91w/base.webp',
+  thumbnail: '/products/casio-f91w/thumb.webp',
   baseImage: '/products/casio-f91w/base.webp',
   overlayImage: '/products/casio-f91w/overlay.webp',
   canvas: {

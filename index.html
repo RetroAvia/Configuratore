@@ -15,15 +15,28 @@
     <title>RetroAvia Lab — Personalizza i tuoi prodotti</title>
 
     <!--
-      Open Graph / Twitter Card: anteprima statica mostrata quando un link
-      del sito viene condiviso su Instagram, WhatsApp, email, ecc. Essendo
-      un'app 100% client-side (senza server che genera pagine su misura),
-      questa anteprima è sempre la stessa per qualunque pagina del sito —
-      non cambia in base al prodotto aperto. È comunque molto meglio di
-      nessuna anteprima, che è la situazione attuale.
+      Indirizzo canonico: dichiara ai motori di ricerca qual è l'URL
+      "ufficiale" di questa pagina. Viene riscritto per ogni rotta dalle
+      pagine statiche generate al momento della build (vedi il plugin
+      `seoStaticPages` in vite.config.ts) e aggiornato durante la navigazione
+      da `usePageMeta`.
+    -->
+    <link rel="canonical" href="https://configuratore-five.vercel.app/" />
+
+    <!--
+      Open Graph / Twitter Card: l'anteprima mostrata quando un link del sito
+      viene condiviso su Instagram, WhatsApp, Telegram o via email.
+
+      I valori qui sotto sono quelli della home. Ogni altra rotta ha la
+      PROPRIA copia statica di questo file, con titolo, descrizione e
+      immagine del prodotto già scritti dentro: i bot che generano le
+      anteprime non eseguono JavaScript, quindi è l'unico modo perché il link
+      di un singolo prodotto mostri quel prodotto invece della home.
+      Vedi il plugin `seoStaticPages` in vite.config.ts.
     -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="RetroAvia Lab" />
+    <meta property="og:locale" content="it_IT" />
     <meta property="og:title" content="RetroAvia Lab — Personalizza i tuoi prodotti" />
     <meta
       property="og:description"
@@ -47,17 +60,6 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap"
       rel="stylesheet"
     />
-
-    <!--
-      Supporto per URL "puliti" (client-side routing) su GitHub Pages.
-      GitHub Pages è un hosting statico e non sa reindirizzare le rotte
-      dell'app (es. /orologi/casio-f91w) verso index.html: il file
-      public/404.html intercetta quelle richieste e le codifica in una
-      query string; questo script, eseguito all'avvio, la decodifica e
-      ripristina l'URL originale tramite la History API.
-      Tecnica: https://github.com/rafgraph/spa-github-pages
-    -->
-    <script src="/spa-redirect.js"></script>
   </head>
   <body>
     <div id="root"></div>

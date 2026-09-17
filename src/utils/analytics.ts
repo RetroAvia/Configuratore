@@ -9,7 +9,14 @@ export type AnalyticsEventName =
   | 'quote_card_generated'
   | 'email_send_clicked'
   | 'instagram_send_clicked'
+  | 'whatsapp_send_clicked'
   | 'summary_copied'
+  /** Il cliente ha copiato il link che riapre la sua configurazione. */
+  | 'config_link_copied'
+  /** Il cliente ha usato la condivisione nativa del telefono (il percorso più breve verso l'invio). */
+  | 'render_shared'
+  /** Qualcuno ha aperto il sito da un link di configurazione condiviso: misura quanto quel canale funziona. */
+  | 'config_link_opened'
 
 type AnalyticsEventData = Record<string, string | number | boolean | null>
 

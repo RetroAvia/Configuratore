@@ -39,7 +39,7 @@ export const gbaColor: ProductConfig = {
     es: 'La consola portátil a color de Nintendo. Personaliza la carcasa con tu propia imagen, dejando intactos la pantalla y los botones.',
     fr: 'La console portable couleur de Nintendo. Personnalisez la coque avec votre propre image, en laissant l’écran et les boutons inchangés.',
   },
-  thumbnail: '/products/gba-color/base.webp',
+  thumbnail: '/products/gba-color/thumb.webp',
   baseImage: '/products/gba-color/base.webp',
   canvas: {
     width: 1497,

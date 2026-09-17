@@ -1,7 +1,13 @@
 {
   "compilerOptions": {
     "target": "ES2023",
-    "lib": ["ES2023"],
+    // "DOM" serve perché `vite.config.ts` importa i dati dei prodotti da
+    // `src/` (per generare pagine statiche e sitemap dagli stessi dati usati
+    // dall'app, senza duplicarli): quella catena di import passa da
+    // `src/i18n/locale.ts`, che nomina `localStorage` e `navigator`. Senza
+    // questa libreria il controllo dei tipi della configurazione fallirebbe
+    // pur essendo codice corretto.
+    "lib": ["ES2023", "DOM"],
     "module": "ESNext",
     "skipLibCheck": true,
 
